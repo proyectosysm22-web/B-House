@@ -7,25 +7,26 @@ function App() {
   const [products, setProducts] = useState([]);
   const [tables, setTables] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [view, setView] = useState("mesero"); // Vista principal: admin, mesero, cocina
-  const [adminTab, setAdminTab] = useState("monitor"); // Sub-pestañas para admin
+  const [view, setView] = useState("mesero"); 
+  const [adminTab, setAdminTab] = useState("monitor"); 
   const [closedOrders, setClosedOrders] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [cart, setCart] = useState([]);
   const [activeOrder, setActiveOrder] = useState(null);
 
-  // Bodega
+  // Bodega y Control de Mesas
   const [warehouse, setWarehouse] = useState([]);
   const [newW, setNewW] = useState({ name: "", quantity: "", unit_cost: "", min_stock: "" });
-  const [editingWarehouse, setEditingWarehouse] = useState(null);
+  const [totalTablesInput, setTotalTablesInput] = useState("");
 
-  // Estados UI
+  // Estados UI y Auditoría
   const [editingProduct, setEditingProduct] = useState(null);
   const [editStock, setEditStock] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [notification, setNotification] = useState({ show: false, msg: "", type: "success" });
   const [showConfirm, setShowConfirm] = useState({ show: false, action: null, msg: "" });
   const [newP, setNewP] = useState({ name: "", price: "", stock: "" });
+  const [searchTerm, setSearchTerm] = useState(""); 
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -65,6 +66,7 @@ function App() {
     setOrders(o || []);
     setClosedOrders(co || []);
     setWarehouse(w || []);
+    if(t) setTotalTablesInput(t.length.toString());
   }
 
   function notify(msg, type = "success") {
@@ -72,13 +74,38 @@ function App() {
     setTimeout(() => setNotification({ show: false, msg: "", type: "success" }), 3000);
   }
 
+  async function updateTableCount() {
+    const newCount = parseInt(totalTablesInput);
+    if (isNaN(newCount) || newCount < 0) return notify("Número no válido", "error");
+    
+    const currentCount = tables.length;
+    if (newCount > currentCount) {
+      const toAdd = [];
+      for (let i = currentCount + 1; i <= newCount; i++) {
+        toAdd.push({ number: i, status: "free" });
+      }
+      await supabase.from("tables").insert(toAdd);
+    } else if (newCount < currentCount) {
+      const toDelete = tables.slice(newCount);
+      const occupied = toDelete.some(t => t.status === "occupied");
+      if (occupied) return notify("No puedes eliminar mesas ocupadas", "error");
+      await supabase.from("tables").delete().in("id", toDelete.map(t => t.id));
+    }
+    getData();
+    notify("Mesas actualizadas");
+  }
+
   async function runCashCut() {
+    if (closedOrders.length === 0) {
+      notify("No hay ventas para realizar el corte", "error");
+      setShowConfirm({ show: false });
+      return;
+    }
     const { error } = await supabase.from("orders").update({ status: 'archived' }).eq('status', 'closed');
     if (!error) { notify("Corte de caja guardado exitosamente"); getData(); }
     setShowConfirm({ show: false });
   }
 
-  // --- LOGICA DE NEGOCIO (SIN CAMBIOS) ---
   async function addWarehouseItem() {
     if (!newW.name || !newW.quantity) return notify("Faltan datos", "error");
     await supabase.from("warehouse").insert([{ name: newW.name, quantity: parseInt(newW.quantity), unit_cost: parseFloat(newW.unit_cost || 0), min_stock: parseInt(newW.min_stock || 0) }]);
@@ -132,9 +159,13 @@ function App() {
     await supabase.from("order_items").update({ is_new: false }).eq("order_id", id);
     await supabase.from("orders").update({ status: "delivered" }).eq("id", id);
     getData();
+    notify("Productos entregados");
   }
 
   async function closeOrder() {
+    if (activeOrder.status === 'open' || activeOrder.status === 'ready') {
+      return notify("No se puede cobrar: Aún hay productos en cocina o por entregar", "error");
+    }
     await supabase.from("orders").update({ status: "closed" }).eq("id", activeOrder.id);
     await supabase.from("tables").update({ status: "free" }).eq("id", selectedTable.id);
     setSelectedTable(null); getData(); notify("Cuenta cobrada"); setShowConfirm({ show: false });
@@ -156,14 +187,12 @@ function App() {
         @media (max-width: 600px) { .table-btn-grid { grid-template-columns: repeat(3, 1fr) !important; } }
       `}</style>
 
-      {/* Notificaciones */}
       {notification.show && (
         <div style={{ position: 'fixed', top: '20px', right: '20px', padding: '15px 25px', borderRadius: '10px', background: notification.type === 'success' ? '#22c55e' : '#ef4444', color: 'white', zIndex: 9999, fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
           {notification.msg}
         </div>
       )}
 
-      {/* Confirmaciones */}
       {showConfirm.show && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 4000 }}>
           <div style={{ background: 'white', padding: '25px', borderRadius: '15px', width: '320px', textAlign: 'center' }}>
@@ -176,44 +205,38 @@ function App() {
         </div>
       )}
 
-      {/* Navegación Principal */}
       <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: "12px", marginBottom: "20px" }}>
         <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{view === "admin" ? "🚀 Admin Panel" : view === "cocina" ? "👨‍🍳 Cocina" : "🍽️ Servicio"}</h2>
         <button onClick={() => supabase.auth.signOut()} style={{ background: "#ef4444", color: "white", border: "none", padding: "6px 12px", borderRadius: "6px", fontWeight: "bold" }}>Salir</button>
       </nav>
 
-      {/* --- VISTA ADMIN CON PESTAÑAS --- */}
       {view === "admin" && (
         <>
-          {/* Tarjetas Rápidas */}
           <div className="grid-cards">
-            <div style={cardStyle("#22c55e")}>
-              <span style={{fontSize: '0.8rem', color: '#64748b'}}>Ventas Hoy</span>
-              <div style={{fontSize: '1.4rem', fontWeight: 'bold'}}>${closedOrders.reduce((s,o)=>s+o.total,0)}</div>
-            </div>
-            <div style={cardStyle("#3b82f6")}>
-              <span style={{fontSize: '0.8rem', color: '#64748b'}}>Mesas Ocupadas</span>
-              <div style={{fontSize: '1.4rem', fontWeight: 'bold'}}>{tables.filter(t=>t.status==="occupied").length}/{tables.length}</div>
-            </div>
-            <div style={cardStyle("#ef4444")}>
-              <span style={{fontSize: '0.8rem', color: '#64748b'}}>En Cocina</span>
-              <div style={{fontSize: '1.4rem', fontWeight: 'bold'}}>{orders.filter(o=>o.status==="open").length}</div>
-            </div>
+            <div style={cardStyle("#22c55e")}><span style={{fontSize: '0.8rem', color: '#64748b'}}>Ventas Hoy</span><div style={{fontSize: '1.4rem', fontWeight: 'bold'}}>${closedOrders.reduce((s,o)=>s+o.total,0)}</div></div>
+            <div style={cardStyle("#3b82f6")}><span style={{fontSize: '0.8rem', color: '#64748b'}}>Mesas Ocupadas</span><div style={{fontSize: '1.4rem', fontWeight: 'bold'}}>{tables.filter(t=>t.status==="occupied").length}/{tables.length}</div></div>
+            <div style={cardStyle("#ef4444")}><span style={{fontSize: '0.8rem', color: '#64748b'}}>En Cocina</span><div style={{fontSize: '1.4rem', fontWeight: 'bold'}}>{orders.filter(o=>o.status==="open").length}</div></div>
           </div>
 
-          {/* Menú de Pestañas Admin */}
           <div style={{ display: 'flex', background: 'white', borderRadius: '10px', padding: '5px', marginBottom: '20px', overflowX: 'auto' }}>
             <button className={`tab-btn ${adminTab === 'monitor' ? 'active' : ''}`} onClick={() => setAdminTab('monitor')}>Monitor</button>
             <button className={`tab-btn ${adminTab === 'productos' ? 'active' : ''}`} onClick={() => setAdminTab('productos')}>Menú/Precios</button>
             <button className={`tab-btn ${adminTab === 'bodega' ? 'active' : ''}`} onClick={() => setAdminTab('bodega')}>Bodega</button>
             <button className={`tab-btn ${adminTab === 'historial' ? 'active' : ''}`} onClick={() => setAdminTab('historial')}>Historial/Corte</button>
+            <button className={`tab-btn ${adminTab === 'auditoria' ? 'active' : ''}`} onClick={() => setAdminTab('auditoria')}>Auditoría Global</button>
           </div>
 
-          {/* Contenido de Pestañas */}
           {adminTab === 'monitor' && (
             <div className="main-grid">
               <div style={sectionStyle}>
-                <h3>Monitor de Mesas</h3>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                   <h3>Monitor de Mesas</h3>
+                   <div style={{textAlign: 'right'}}>
+                      <small style={{display: 'block', color: '#64748b'}}>Control de Mesas</small>
+                      <input type="number" value={totalTablesInput} onChange={(e)=>setTotalTablesInput(e.target.value)} style={{...inputStyle, width: '60px', padding: '5px'}} />
+                      <button onClick={updateTableCount} style={{marginLeft: '5px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', padding: '5px 10px', fontSize: '12px'}}>Guardar</button>
+                   </div>
+                </div>
                 {tables.filter(t=>t.status==='occupied').map(t => {
                   const o = orders.find(ord=>ord.table_id===t.id && ord.status !== 'archived' && ord.status !== 'closed');
                   return (
@@ -302,11 +325,11 @@ function App() {
           {adminTab === 'historial' && (
             <div style={sectionStyle}>
               <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
-                <h3>Historial de Ventas (Día Actual)</h3>
+                <h3>Historial de Ventas (Turno Actual)</h3>
                 <button onClick={() => setShowConfirm({ show: true, msg: "¿Cerrar caja y archivar ventas?", action: runCashCut })} style={{background: '#000', color: 'white', padding: '10px 15px', borderRadius: '8px', border: 'none', fontWeight: 'bold'}}>CORTE DE CAJA</button>
               </div>
               <div style={{maxHeight: '400px', overflowY: 'auto'}}>
-                {closedOrders.length === 0 ? <p>No hay cobros registrados hoy.</p> : closedOrders.map(o => (
+                {closedOrders.length === 0 ? <p>No hay cobros registrados en este turno.</p> : closedOrders.map(o => (
                   <div key={o.id} style={{padding: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                     <div>
                       <span style={{fontWeight: 'bold'}}>Mesa {o.tables?.number}</span>
@@ -317,15 +340,29 @@ function App() {
                 ))}
               </div>
               <div style={{marginTop: '20px', padding: '15px', background: '#22c55e', color: 'white', borderRadius: '10px', textAlign: 'right'}}>
-                <span style={{fontSize: '0.9rem'}}>TOTAL ACUMULADO:</span>
+                <span style={{fontSize: '0.9rem'}}>TOTAL TURNO ACTUAL:</span>
                 <div style={{fontSize: '1.8rem', fontWeight: 'bold'}}>${closedOrders.reduce((s,o)=>s+o.total,0)}</div>
+              </div>
+            </div>
+          )}
+
+          {adminTab === 'auditoria' && (
+            <div style={sectionStyle}>
+              <h3>Auditoría (Ventas Archivadas)</h3>
+              <div style={{marginBottom: '20px'}}><input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...inputStyle, width: '100%'}} /></div>
+              <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+                {orders.filter(o => o.status === 'archived' && (searchTerm === "" || o.created_at.includes(searchTerm) || o.order_items.some(oi => oi.products?.name.toLowerCase().includes(searchTerm.toLowerCase())))).sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(o => (
+                  <div key={o.id} style={{padding: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div><span style={{fontWeight: 'bold', fontSize: '0.9rem'}}>{new Date(o.created_at).toLocaleDateString()} - Mesa {o.tables?.number}</span><div style={{fontSize: '0.8rem', color: '#64748b'}}>{o.order_items.map(oi => `${oi.quantity}x ${oi.products?.name}`).join(', ')}</div></div>
+                    <span style={{fontWeight: 'bold'}}>${o.total}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* --- VISTA MESERO (RESTRUCTURADA PARA RESPONSIVE) --- */}
       {view === "mesero" && (
         <div className="main-grid">
           <div style={sectionStyle}>
@@ -340,7 +377,6 @@ function App() {
                 );
               })}
             </div>
-            
             {selectedTable && (
               <>
                 <h4>Menú Disponible</h4>
@@ -354,13 +390,6 @@ function App() {
                 </div>
                 {cart.length > 0 && (
                   <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px" }}>
-                    <h4 style={{marginTop: 0}}>🛒 Nuevo Pedido</h4>
-                    {cart.map(item => (
-                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '5px' }}>
-                        <span>{item.quantity}x {item.name}</span>
-                        <button onClick={() => setCart(cart.filter(i=>i.id!==item.id))} style={{color: 'red', border: 'none', background: 'none'}}>x</button>
-                      </div>
-                    ))}
                     <button onClick={saveOrder} style={{ width: "100%", background: "#3b82f6", color: "white", border: "none", padding: "12px", marginTop: "10px", borderRadius: "8px", fontWeight: "bold" }}>ENVIAR A COCINA</button>
                   </div>
                 )}
@@ -370,56 +399,61 @@ function App() {
 
           <div style={sectionStyle}>
             <h3 style={{marginTop: 0}}>Mesa {selectedTable?.number || "--"}</h3>
-            {!activeOrder && <p style={{color: '#94a3b8'}}>Mesa libre o sin consumos activos.</p>}
             {activeOrder && (
               <div>
                 {activeOrder.status === 'ready' && (
                   <div style={{ background: "#fff3cd", border: "2px solid #fbbf24", padding: "15px", borderRadius: "10px", marginBottom: "15px" }}>
-                    <p style={{ margin: "0 0 5px 0", fontWeight: "bold" }}>🔔 ¡PLATOS LISTOS!</p>
+                    <p style={{ margin: "0 0 5px 0", fontWeight: "bold", color: "#856404" }}>🔔 ¡LISTO PARA SERVIR!</p>
                     <button onClick={() => markDelivered(activeOrder.id)} style={{ width: "100%", background: "#fbbf24", border: "none", padding: "10px", borderRadius: "5px", fontWeight: 'bold' }}>MARCAR COMO ENTREGADO</button>
                   </div>
                 )}
                 <div style={{ marginBottom: "20px" }}>
                   {activeOrder.order_items.map((oi, i) => (
                     <div key={i} style={{ padding: "5px 0", borderBottom: "1px solid #f1f5f9", display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{oi.quantity}x {oi.products?.name}</span>
+                      <span>{oi.quantity}x {oi.products?.name} {oi.is_new ? "(Cocinando)" : "(Servido)"}</span>
                       <span>${oi.price * oi.quantity}</span>
                     </div>
                   ))}
                 </div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#22c55e', textAlign: 'right', marginBottom: '15px' }}>Total: ${activeOrder.total}</div>
-                <button onClick={() => setShowConfirm({ show: true, msg: "¿Cobrar Mesa " + selectedTable.number + "?", action: closeOrder })} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "15px", borderRadius: "10px", fontWeight: 'bold', fontSize: '1.1rem' }}>COBRAR CUENTA</button>
+                
+                {/* BOTON DE COBRO CON BLOQUEO */}
+                <button 
+                  onClick={() => {
+                    if (activeOrder.status === 'open' || activeOrder.status === 'ready') {
+                      notify("Pedido aún en cocina o por entregar. ¡No se puede cobrar!", "error");
+                    } else {
+                      setShowConfirm({ show: true, msg: "¿Cobrar Mesa " + selectedTable.number + "?", action: closeOrder });
+                    }
+                  }} 
+                  style={{ 
+                    width: "100%", 
+                    background: (activeOrder.status === 'open' || activeOrder.status === 'ready') ? "#94a3b8" : "#22c55e", 
+                    color: "white", border: "none", padding: "15px", borderRadius: "10px", fontWeight: 'bold', fontSize: '1.1rem' 
+                  }}
+                >
+                  {(activeOrder.status === 'open' || activeOrder.status === 'ready') ? "PEDIDO EN CURSO..." : "COBRAR CUENTA"}
+                </button>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* --- VISTA COCINA --- */}
       {view === "cocina" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "20px" }}>
           {orders.filter(o => o.status === "open").map(o => (
             <div key={o.id} style={{...sectionStyle, borderTop: '6px solid #3b82f6'}}>
               <h2 style={{marginTop: 0}}>Mesa {o.tables?.number}</h2>
-              <div style={{marginBottom: '15px'}}>
-                {o.order_items.filter(oi => oi.is_new).map((oi, i) => (
-                  <div key={i} style={{fontSize: '1.2rem', padding: '5px 0', borderBottom: '1px dashed #eee'}}>
-                    <b>{oi.quantity}x</b> {oi.products?.name}
-                  </div>
-                ))}
-              </div>
-              <button onClick={async () => { await supabase.from("orders").update({ status: "ready" }).eq("id", o.id); getData(); notify("Orden terminada"); }} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "15px", borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem' }}>ORDEN LISTA</button>
+              {o.order_items.filter(oi => oi.is_new).map((oi, i) => (
+                <div key={i} style={{fontSize: '1.2rem', padding: '5px 0', borderBottom: '1px dashed #eee'}}><b>{oi.quantity}x</b> {oi.products?.name}</div>
+              ))}
+              <button onClick={async () => { await supabase.from("orders").update({ status: "ready" }).eq("id", o.id); getData(); notify("Orden terminada"); }} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "15px", borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '10px' }}>ORDEN LISTA</button>
             </div>
           ))}
-          {orders.filter(o => o.status === "open").length === 0 && (
-            <div style={{textAlign: 'center', gridColumn: '1/-1', padding: '50px', color: '#94a3b8'}}>
-              <h1>📭 Sin pedidos pendientes</h1>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Modal Edición Producto */}
       {editingProduct && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '300px' }}>
@@ -434,7 +468,6 @@ function App() {
         </div>
       )}
 
-      {/* Botón Flotante para Admin (Cambio de Vista) */}
       {isAdmin && (
         <button onClick={() => setView(view === "admin" ? "mesero" : "admin")} style={{ position: "fixed", bottom: "25px", right: "25px", width: '65px', height: '65px', borderRadius: "50%", background: "#1e293b", color: "white", border: "none", fontSize: "28px", cursor: "pointer", boxShadow: '0 6px 15px rgba(0,0,0,0.4)', zIndex: 100 }}>
           {view === "admin" ? "🪑" : "📊"}
@@ -444,7 +477,6 @@ function App() {
   );
 }
 
-// Estilos Reutilizables
 const cardStyle = (color) => ({ background: "#fff", padding: "15px", borderRadius: "12px", borderLeft: `6px solid ${color}`, boxShadow: "0 2px 4px rgba(0,0,0,0.05)" });
 const sectionStyle = { background: "#fff", padding: "20px", borderRadius: "15px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", marginBottom: "20px" };
 const inputStyle = { padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', flex: 1 };
