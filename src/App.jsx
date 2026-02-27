@@ -192,11 +192,28 @@ function App() {
   const isAdmin = session.user.email.toLowerCase().includes("admin");
 
   return (
-    <div style={{ padding: "20px", fontFamily: "'Inter', sans-serif", backgroundColor: "#f1f5f9", minHeight: "100vh" }}>
+    <div className="main-container" style={{ padding: "10px", fontFamily: "'Inter', sans-serif", backgroundColor: "#f1f5f9", minHeight: "100vh" }}>
       
       <style>{`
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .blink-ready { animation: blink 1s infinite; background-color: #fbbf24 !important; color: black !important; }
+        
+        /* AJUSTES RESPONSIVOS */
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .grid-main { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .grid-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .table-wrapper { width: 100%; overflow-x: auto; }
+        
+        @media (max-width: 768px) {
+          .grid-main { grid-template-columns: 1fr !important; }
+          .grid-menu { grid-template-columns: 1fr !important; }
+          .nav-header { flex-direction: column; gap: 10px; text-align: center; }
+          .grid-stats { grid-template-columns: 1fr 1fr; }
+          .hide-mobile { display: none; }
+          input, button { font-size: 14px !important; }
+          .section-card { padding: 15px !important; }
+        }
       `}</style>
 
       {notification.show && (
@@ -207,74 +224,76 @@ function App() {
 
       {showConfirm.show && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 4000 }}>
-          <div style={{ background: 'white', padding: '25px', borderRadius: '15px', width: '320px', textAlign: 'center' }}>
+          <div style={{ background: 'white', padding: '25px', borderRadius: '15px', width: '90%', maxWidth: '320px', textAlign: 'center' }}>
             <p style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{showConfirm.msg}</p>
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button onClick={() => setShowConfirm({ show: false })} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer' }}>No, volver</button>
-              <button onClick={showConfirm.action} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>Sí, confirmar</button>
+              <button onClick={() => setShowConfirm({ show: false })} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer' }}>No</button>
+              <button onClick={showConfirm.action} style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>Sí</button>
             </div>
           </div>
         </div>
       )}
 
-      <nav style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1e293b", color: "white", padding: "12px 25px", borderRadius: "12px", marginBottom: "20px" }}>
-        <h2 style={{ margin: 0 }}>🍟 Admin Panel</h2>
-        <div style={{ display: "flex", gap: "10px" }}>
+      <nav className="nav-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: "12px", marginBottom: "20px" }}>
+        <h2 style={{ margin: 0, fontSize: '1.2rem' }}>🍟 B-House</h2>
+        <div style={{ display: "flex", gap: "8px", flexWrap: 'wrap', justifyContent: 'center' }}>
           {isAdmin && (
             <div style={{ display: 'flex', gap: '5px' }}>
-              <button onClick={() => setView("admin")} style={{ background: view === "admin" ? "#3b82f6" : "transparent", color: "white", border: "1px solid white", padding: "8px 15px", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}>Monitor</button>
-              <button onClick={() => setView("ajustes")} style={{ background: view === "ajustes" ? "#3b82f6" : "transparent", color: "white", border: "1px solid white", padding: "8px 15px", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}>Ventas</button>
-              <button onClick={() => setView("bodega")} style={{ background: view === "bodega" ? "#3b82f6" : "transparent", color: "white", border: "1px solid white", padding: "8px 15px", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}>📦 Bodega</button>
+              <button onClick={() => setView("admin")} style={{ background: view === "admin" ? "#3b82f6" : "transparent", color: "white", border: "1px solid white", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: '12px' }}>Monitor</button>
+              <button onClick={() => setView("ajustes")} style={{ background: view === "ajustes" ? "#3b82f6" : "transparent", color: "white", border: "1px solid white", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: '12px' }}>Ventas</button>
+              <button onClick={() => setView("bodega")} style={{ background: view === "bodega" ? "#3b82f6" : "transparent", color: "white", border: "1px solid white", padding: "6px 10px", borderRadius: "6px", cursor: "pointer", fontSize: '12px' }}>Bodega</button>
             </div>
           )}
-          <button onClick={() => supabase.auth.signOut()} style={{ background: "#ef4444", color: "white", border: "none", padding: "8px 15px", borderRadius: "6px", fontWeight: "bold" }}>Salir</button>
+          <button onClick={() => supabase.auth.signOut()} style={{ background: "#ef4444", color: "white", border: "none", padding: "6px 10px", borderRadius: "6px", fontWeight: "bold", fontSize: '12px' }}>Salir</button>
         </div>
       </nav>
 
       {isAdmin && view === "bodega" && (
         <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
-          <div style={sectionStyle}>
-            <h3>Añadir Insumo a Bodega</h3>
+          <div style={sectionStyle} className="section-card">
+            <h3>Añadir Insumo</h3>
             <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-              <input type="text" placeholder="Nombre" value={newW.name} onChange={e => setNewW({...newW, name: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: 1}} />
-              <input type="number" placeholder="Cant." value={newW.quantity} onChange={e => setNewW({...newW, quantity: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', width: '90px'}} />
-              <input type="number" placeholder="Costo" value={newW.unit_cost} onChange={e => setNewW({...newW, unit_cost: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', width: '110px'}} />
-              <input type="number" placeholder="Mín." value={newW.min_stock} onChange={e => setNewW({...newW, min_stock: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', width: '100px'}} />
-              <button onClick={addWarehouseItem} style={{background: '#22c55e', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}>GUARDAR</button>
+              <input type="text" placeholder="Nombre" value={newW.name} onChange={e => setNewW({...newW, name: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: '1 1 100%'}} />
+              <input type="number" placeholder="Cant." value={newW.quantity} onChange={e => setNewW({...newW, quantity: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: 1}} />
+              <input type="number" placeholder="Costo" value={newW.unit_cost} onChange={e => setNewW({...newW, unit_cost: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: 1}} />
+              <button onClick={addWarehouseItem} style={{background: '#22c55e', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', width: '100%'}}>GUARDAR</button>
             </div>
           </div>
-          <div style={sectionStyle}>
+          <div style={sectionStyle} className="section-card">
             <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '10px'}}>
-              <h3>Inventario Almacén</h3>
-              <div style={{fontWeight: 'bold', background: '#f8fafc', padding: '5px 15px', borderRadius: '10px'}}>Valor: ${warehouse.reduce((s,i)=>s+(i.quantity*i.unit_cost),0)}</div>
+              <h3>Bodega</h3>
+              <div style={{fontWeight: 'bold', background: '#f8fafc', padding: '5px 10px', borderRadius: '10px', fontSize: '12px'}}>Total: ${warehouse.reduce((s,i)=>s+(i.quantity*i.unit_cost),0)}</div>
             </div>
-            <table style={{ width: "100%", borderCollapse: 'collapse' }}>
-              <thead style={{textAlign: 'left', background: '#f8fafc'}}><tr><th style={{padding: '10px'}}>Insumo</th><th>Stock</th><th>Costo</th><th>Estado</th><th>Acciones</th></tr></thead>
-              <tbody>
-                {warehouse.map(item => (
-                  <tr key={item.id} style={{borderBottom: '1px solid #f1f5f9'}}>
-                    <td style={{padding: '10px'}}>{item.name}</td><td>{item.quantity}</td><td>${item.unit_cost}</td>
-                    <td>{item.quantity <= item.min_stock ? <span style={{color: 'red', fontWeight: 'bold'}}>⚠️ Bajo</span> : <span style={{color: 'green'}}>OK</span>}</td>
-                    <td><button onClick={() => setEditingWarehouse(item)} style={{background: '#3b82f6', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer'}}>Editar</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-wrapper">
+              <table style={{ width: "100%", borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead style={{textAlign: 'left', background: '#f8fafc'}}><tr><th style={{padding: '10px'}}>Insumo</th><th>Stock</th><th className="hide-mobile">Costo</th><th>Acciones</th></tr></thead>
+                <tbody>
+                  {warehouse.map(item => (
+                    <tr key={item.id} style={{borderBottom: '1px solid #f1f5f9'}}>
+                      <td style={{padding: '10px'}}>{item.name} {item.quantity <= item.min_stock && "⚠️"}</td>
+                      <td>{item.quantity}</td>
+                      <td className="hide-mobile">${item.unit_cost}</td>
+                      <td><button onClick={() => setEditingWarehouse(item)} style={{background: '#3b82f6', color: '#fff', border: 'none', padding: '5px', borderRadius: '4px'}}>Edit</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {isAdmin && view === "admin" && (
         <div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "15px", marginBottom: "20px" }}>
-            <div style={cardStyle("#22c55e")}><h3>Cobrado Hoy</h3><p style={statStyle}>${closedOrders.reduce((s,o)=>s+o.total,0)}</p><button onClick={() => setShowConfirm({ show: true, msg: "¿Hacer el corte?", action: runCashCut })} style={{fontSize: '10px', padding: '6px', cursor: 'pointer', background: '#000', color: '#fff', border: 'none', borderRadius: '4px'}}>CORTE DE CAJA</button></div>
+          <div className="grid-stats">
+            <div style={cardStyle("#22c55e")}><h3>Cobrado</h3><p style={statStyle}>${closedOrders.reduce((s,o)=>s+o.total,0)}</p><button onClick={() => setShowConfirm({ show: true, msg: "¿Corte?", action: runCashCut })} style={{fontSize: '10px', padding: '5px', background: '#000', color: '#fff', border: 'none', borderRadius: '4px'}}>CORTE</button></div>
             <div style={cardStyle("#f59e0b")}><h3>En Mesas</h3><p style={statStyle}>${orders.filter(o=>o.status!=='archived').reduce((s,o)=>s+o.total,0)}</p></div>
-            <div style={cardStyle("#3b82f6")}><h3>Mesas</h3><p style={statStyle}>{tables.filter(t=>t.status==="occupied").length}/{tables.length}</p></div>
+            <div style={cardStyle("#3b82f6")}><h3>Ocupado</h3><p style={statStyle}>{tables.filter(t=>t.status==="occupied").length}/{tables.length}</p></div>
             <div style={cardStyle("#ef4444")}><h3>Cocina</h3><p style={statStyle}>{orders.filter(o=>o.status==="open").length}</p></div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px" }}>
-            <div style={sectionStyle}>
-              <h3>Monitor de Mesas (Activo)</h3>
+          <div className="grid-main">
+            <div style={sectionStyle} className="section-card">
+              <h3>Monitor</h3>
               {tables.filter(t=>t.status==='occupied').map(t => {
                 const o = orders.find(ord=>ord.table_id===t.id && ord.status !== 'archived');
                 return (
@@ -285,75 +304,77 @@ function App() {
                 );
               })}
             </div>
-            <div style={sectionStyle}><h3 style={{color: '#ef4444'}}>Alertas Stock</h3>{products.filter(p => p.stock < 10).map(p => <div key={p.id} style={{fontSize: '0.9rem', marginBottom: '5px'}}>⚠️ {p.name}: <b>{p.stock}</b></div>)}</div>
+            <div style={sectionStyle} className="section-card"><h3 style={{color: '#ef4444'}}>Stock Bajo</h3>{products.filter(p => p.stock < 10).map(p => <div key={p.id} style={{fontSize: '0.9rem', marginBottom: '5px'}}>⚠️ {p.name}: {p.stock}</div>)}</div>
           </div>
         </div>
       )}
 
       {isAdmin && view === "ajustes" && (
         <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
-          <div style={sectionStyle}>
-            <h3>Añadir Nuevo Producto</h3>
+          <div style={sectionStyle} className="section-card">
+            <h3>Nuevo Producto</h3>
             <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-              <input type="text" placeholder="Nombre" value={newP.name} onChange={e => setNewP({...newP, name: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: 1}} />
-              <input type="number" placeholder="Precio" value={newP.price} onChange={e => setNewP({...newP, price: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', width: '100px'}} />
-              <input type="number" placeholder="Stock" value={newP.stock} onChange={e => setNewP({...newP, stock: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', width: '100px'}} />
-              <button onClick={addProduct} style={{background: '#22c55e', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}>+ AÑADIR</button>
+              <input type="text" placeholder="Nombre" value={newP.name} onChange={e => setNewP({...newP, name: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: '1 1 100%'}} />
+              <input type="number" placeholder="Precio" value={newP.price} onChange={e => setNewP({...newP, price: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: 1}} />
+              <input type="number" placeholder="Stock" value={newP.stock} onChange={e => setNewP({...newP, stock: e.target.value})} style={{padding: '8px', borderRadius: '5px', border: '1px solid #ccc', flex: 1}} />
+              <button onClick={addProduct} style={{background: '#22c55e', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', width: '100%'}}>+ AÑADIR</button>
             </div>
           </div>
-          <div style={sectionStyle}>
+          <div style={sectionStyle} className="section-card">
             <h3>Inventario</h3>
-            <table style={{ width: "100%", borderCollapse: 'collapse' }}>
-              <thead style={{textAlign: 'left', background: '#f8fafc'}}><tr><th style={{padding: '10px'}}>Producto</th><th>Precio</th><th>Stock</th><th>Estado</th><th>Acciones</th></tr></thead>
-              <tbody>
-                {products.map(p => (
-                  <tr key={p.id} style={{borderBottom: '1px solid #f1f5f9', opacity: p.is_active && p.stock > 0 ? 1 : 0.5}}>
-                    <td style={{padding: '10px'}}>{p.name}</td><td>${p.price}</td><td>{p.stock}</td>
-                    <td>{p.is_active && p.stock > 0 ? "✅ Activo" : "❌ Inactivo"}</td>
-                    <td style={{display: 'flex', gap: '5px'}}>
-                      <button onClick={() => toggleProductStatus(p)} style={{border: 'none', background: p.is_active ? '#64748b' : '#22c55e', color: '#fff', borderRadius: '4px', cursor: 'pointer', padding: '5px'}}>
-                        {p.is_active ? "Ocultar" : "Mostrar"}
-                      </button>
-                      <button onClick={() => { setEditingProduct(p); setEditPrice(p.price); setEditStock(p.stock); }} style={{border: 'none', background: '#3b82f6', color: '#fff', borderRadius: '4px', cursor: 'pointer', padding: '5px'}}>📝</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-wrapper">
+              <table style={{ width: "100%", borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead style={{textAlign: 'left', background: '#f8fafc'}}><tr><th style={{padding: '10px'}}>Producto</th><th>Stock</th><th>Acciones</th></tr></thead>
+                <tbody>
+                  {products.map(p => (
+                    <tr key={p.id} style={{borderBottom: '1px solid #f1f5f9', opacity: p.is_active && p.stock > 0 ? 1 : 0.5}}>
+                      <td style={{padding: '10px'}}>{p.name}<br/><small>${p.price}</small></td>
+                      <td>{p.stock}</td>
+                      <td>
+                        <div style={{display: 'flex', gap: '5px'}}>
+                          <button onClick={() => toggleProductStatus(p)} style={{border: 'none', background: p.is_active ? '#64748b' : '#22c55e', color: '#fff', borderRadius: '4px', padding: '5px', fontSize: '10px'}}>{p.is_active ? "Off" : "On"}</button>
+                          <button onClick={() => { setEditingProduct(p); setEditPrice(p.price); setEditStock(p.stock); }} style={{border: 'none', background: '#3b82f6', color: '#fff', borderRadius: '4px', padding: '5px'}}>📝</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {view === "mesero" && (
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "20px" }}>
-          <div style={sectionStyle}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px", marginBottom: '20px' }}>
+        <div className="grid-main">
+          <div style={sectionStyle} className="section-card">
+            <div className="grid-tables">
               {tables.map(t => {
                 const o = orders.find(ord => ord.table_id === t.id && ord.status === 'ready');
                 return (
-                  <button key={t.id} onClick={() => {setSelectedTable(t); setCart([]);}} className={o ? "blink-ready" : ""} style={{ padding: "15px", background: selectedTable?.id === t.id ? "#22c55e" : t.status === "occupied" ? "#ef4444" : "#cbd5e1", color: "white", border: "none", borderRadius: "8px", fontWeight: 'bold', cursor: 'pointer' }}>
-                    Mesa {t.number} {o ? "🔔" : ""}
+                  <button key={t.id} onClick={() => {setSelectedTable(t); setCart([]);}} className={o ? "blink-ready" : ""} style={{ padding: "10px 5px", background: selectedTable?.id === t.id ? "#22c55e" : t.status === "occupied" ? "#ef4444" : "#cbd5e1", color: "white", border: "none", borderRadius: "8px", fontWeight: 'bold', fontSize: '11px' }}>
+                    M{t.number} {o ? "🔔" : ""}
                   </button>
                 );
               })}
             </div>
             {selectedTable && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+              <div className="grid-menu">
                 <div>
-                  <h4>Menú</h4>
+                  <h4 style={{marginTop: 0}}>Menú</h4>
                   {products.filter(p => p.is_active && p.stock > 0).map(p => (
-                    <div key={p.id} style={{ padding: "10px", borderBottom: "1px solid #f1f5f9", display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{p.name} (${p.price})</span>
-                      <button onClick={() => addToCart(p)} style={{background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>+</button>
+                    <div key={p.id} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{fontSize: '14px'}}>{p.name} <small>(${p.price})</small></span>
+                      <button onClick={() => addToCart(p)} style={{background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', width: '30px', height: '30px'}}>+</button>
                     </div>
                   ))}
                 </div>
                 <div style={{ background: "#f8fafc", padding: "10px", borderRadius: "8px" }}>
-                  <h4>🛒 Carrito</h4>
+                  <h4 style={{marginTop: 0}}>🛒 Carrito</h4>
                   {cart.map(item => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', background: '#fff', padding: '5px' }}>
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', background: '#fff', padding: '5px', fontSize: '13px' }}>
                       <span>{item.quantity}x {item.name}</span>
-                      <button onClick={() => setCart(cart.filter(i=>i.id!==item.id))} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>x</button>
+                      <button onClick={() => setCart(cart.filter(i=>i.id!==item.id))} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px' }}>x</button>
                     </div>
                   ))}
                   {cart.length > 0 && <button onClick={saveOrder} style={{ width: "100%", background: "#3b82f6", color: "white", border: "none", padding: "10px", marginTop: "10px", borderRadius: "5px", fontWeight: "bold" }}>ENVIAR</button>}
@@ -362,32 +383,17 @@ function App() {
             )}
           </div>
 
-          <div style={sectionStyle}>
+          <div style={sectionStyle} className="section-card">
             <h3>Mesa {selectedTable?.number || "?"}</h3>
             {activeOrder && (
               <div>
                 {activeOrder.status === 'ready' && (
-                  <div style={{ background: "#fff3cd", border: "2px solid #fbbf24", padding: "12px", borderRadius: "10px", marginBottom: "15px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}>
-                    <p style={{ margin: "0 0 8px 0", fontWeight: "bold", color: "#856404", fontSize: "14px" }}>🔔 PEDIDO PARA ENTREGAR:</p>
-                    <div style={{ marginBottom: "10px" }}>
-                      {Object.values(
-                        activeOrder.order_items.filter(oi => oi.is_new).reduce((acc, item) => {
-                          const name = item.products?.name;
-                          if (!acc[name]) acc[name] = { name, quantity: 0 };
-                          acc[name].quantity += item.quantity;
-                          return acc;
-                        }, {})
-                      ).map((groupedItem, i) => (
-                        <div key={i} style={{ fontSize: "15px", padding: "2px 0", borderBottom: "1px dashed #dec985" }}>
-                          • <b>{groupedItem.quantity}x</b> {groupedItem.name}
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={() => markDelivered(activeOrder.id)} style={{ width: "100%", background: "#fbbf24", color: "black", border: "none", padding: "12px", borderRadius: "8px", fontWeight: 'bold', cursor: 'pointer' }}>RECOGER</button>
+                  <div style={{ background: "#fff3cd", border: "2px solid #fbbf24", padding: "10px", borderRadius: "10px", marginBottom: "15px" }}>
+                    <p style={{ margin: "0 0 5px 0", fontWeight: "bold", color: "#856404", fontSize: "12px" }}>PEDIDO LISTO:</p>
+                    <button onClick={() => markDelivered(activeOrder.id)} style={{ width: "100%", background: "#fbbf24", color: "black", border: "none", padding: "10px", borderRadius: "8px", fontWeight: 'bold' }}>RECOGER</button>
                   </div>
                 )}
-
-                <div style={{ marginBottom: "15px" }}>
+                <div style={{ marginBottom: "10px", fontSize: '13px' }}>
                   {Object.values(
                     activeOrder.order_items.reduce((acc, item) => {
                       const name = item.products?.name;
@@ -396,14 +402,13 @@ function App() {
                       return acc;
                     }, {})
                   ).map((groupedItem, i) => (
-                    <div key={i} style={{ padding: "3px 0", fontSize: "14px" }}>
+                    <div key={i} style={{ padding: "2px 0" }}>
                       {groupedItem.quantity}x {groupedItem.name} - ${groupedItem.price * groupedItem.quantity}
                     </div>
                   ))}
                 </div>
-
-                <hr/><h3 style={{color: '#22c55e'}}>Total: ${activeOrder.total}</h3>
-                <button onClick={() => setShowConfirm({ show: true, msg: "¿Cobrar Mesa " + selectedTable.number + "?", action: closeOrder })} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "15px", borderRadius: "8px", fontWeight: 'bold', cursor: 'pointer' }}>COBRAR</button>
+                <hr/><h3 style={{color: '#22c55e', margin: '10px 0'}}>Total: ${activeOrder.total}</h3>
+                <button onClick={() => setShowConfirm({ show: true, msg: "¿Cobrar Mesa " + selectedTable.number + "?", action: closeOrder })} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "12px", borderRadius: "8px", fontWeight: 'bold' }}>COBRAR</button>
               </div>
             )}
           </div>
@@ -411,14 +416,14 @@ function App() {
       )}
 
       {view === "cocina" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "15px" }}>
           {orders.filter(o => o.status === "open").map(o => (
-            <div key={o.id} style={sectionStyle}>
-              <h4 style={{borderBottom: '2px solid #3b82f6'}}>Mesa {o.tables?.number}</h4>
+            <div key={o.id} style={sectionStyle} className="section-card">
+              <h4 style={{borderBottom: '2px solid #3b82f6', marginTop: 0}}>Mesa {o.tables?.number}</h4>
               {o.order_items.filter(oi => oi.is_new).map((oi, i) => (
-                <div key={i} style={{fontWeight: 'bold'}}>• {oi.quantity}x {oi.products?.name}</div>
+                <div key={i} style={{fontWeight: 'bold', fontSize: '14px'}}>• {oi.quantity}x {oi.products?.name}</div>
               ))}
-              <button onClick={async () => { await supabase.from("orders").update({ status: "ready" }).eq("id", o.id); getData(); notify("Listo"); }} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "10px", marginTop: "10px", borderRadius: '5px', cursor: 'pointer' }}>LISTO</button>
+              <button onClick={async () => { await supabase.from("orders").update({ status: "ready" }).eq("id", o.id); getData(); notify("Listo"); }} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "10px", marginTop: "10px", borderRadius: '5px' }}>LISTO</button>
             </div>
           ))}
         </div>
@@ -426,13 +431,13 @@ function App() {
 
       {editingWarehouse && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
-          <div style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '320px' }}>
-            <h3 style={{marginTop: 0}}>Editar Insumo</h3>
-            <label>Nombre:</label><input type="text" value={editingWarehouse.name} onChange={e => setEditingWarehouse({...editingWarehouse, name: e.target.value})} style={{ width: '100%', marginBottom: '10px', padding: '8px' }} />
-            <label>Cantidad:</label><input type="number" value={editingWarehouse.quantity} onChange={e => setEditingWarehouse({...editingWarehouse, quantity: e.target.value})} style={{ width: '100%', marginBottom: '10px', padding: '8px' }} />
+          <div style={{ background: 'white', padding: '20px', borderRadius: '15px', width: '90%', maxWidth: '320px' }}>
+            <h3>Editar Insumo</h3>
+            <input type="text" value={editingWarehouse.name} onChange={e => setEditingWarehouse({...editingWarehouse, name: e.target.value})} style={{ width: '100%', marginBottom: '10px', padding: '8px' }} />
+            <input type="number" value={editingWarehouse.quantity} onChange={e => setEditingWarehouse({...editingWarehouse, quantity: e.target.value})} style={{ width: '100%', marginBottom: '10px', padding: '8px' }} />
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setEditingWarehouse(null)} style={{ flex: 1, padding: '10px' }}>Cerrar</button>
-              <button onClick={updateWarehouseItem} style={{ flex: 1, padding: '10px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '5px' }}>Guardar</button>
+              <button onClick={updateWarehouseItem} style={{ flex: 1, padding: '10px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '5px' }}>OK</button>
             </div>
           </div>
         </div>
@@ -440,20 +445,20 @@ function App() {
 
       {editingProduct && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
-          <div style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '300px' }}>
-            <h3 style={{marginTop: 0}}>Editar {editingProduct.name}</h3>
+          <div style={{ background: 'white', padding: '20px', borderRadius: '15px', width: '90%', maxWidth: '300px' }}>
+            <h3>Editar {editingProduct.name}</h3>
             <label>Precio:</label><input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} style={{ width: '100%', marginBottom: '10px', padding: '8px' }} />
             <label>Stock:</label><input type="number" value={editStock} onChange={e => setEditStock(e.target.value)} style={{ width: '100%', marginBottom: '20px', padding: '8px' }} />
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setEditingProduct(null)} style={{ flex: 1, padding: '10px' }}>Cerrar</button>
-              <button onClick={handleUpdateProduct} style={{ flex: 1, padding: '10px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '5px' }}>Guardar</button>
+              <button onClick={handleUpdateProduct} style={{ flex: 1, padding: '10px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '5px' }}>OK</button>
             </div>
           </div>
         </div>
       )}
 
       {isAdmin && (
-        <button onClick={() => setView(view === "admin" || view === "ajustes" || view === "bodega" ? "mesero" : "admin")} style={{ position: "fixed", bottom: "20px", right: "20px", width: '60px', height: '60px', borderRadius: "50%", background: "#1e293b", color: "white", border: "none", fontSize: "24px", cursor: "pointer", boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+        <button onClick={() => setView(view === "admin" || view === "ajustes" || view === "bodega" ? "mesero" : "admin")} style={{ position: "fixed", bottom: "20px", right: "20px", width: '50px', height: '50px', borderRadius: "50%", background: "#1e293b", color: "white", border: "none", fontSize: "20px", cursor: "pointer", boxShadow: '0 4px 10px rgba(0,0,0,0.3)', zIndex: 1000 }}>
           {view === "admin" || view === "ajustes" || view === "bodega" ? "🪑" : "📊"}
         </button>
       )}
@@ -461,8 +466,8 @@ function App() {
   );
 }
 
-const cardStyle = (color) => ({ background: "#fff", padding: "15px", borderRadius: "15px", borderTop: `6px solid ${color}`, textAlign: "center", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" });
-const statStyle = { fontSize: "1.8rem", fontWeight: "bold", margin: "10px 0" };
+const cardStyle = (color) => ({ background: "#fff", padding: "10px", borderRadius: "15px", borderTop: `6px solid ${color}`, textAlign: "center", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" });
+const statStyle = { fontSize: "1.2rem", fontWeight: "bold", margin: "5px 0" };
 const sectionStyle = { background: "#fff", padding: "20px", borderRadius: "15px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)", marginBottom: "20px" };
 
 export default App;
