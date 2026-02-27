@@ -138,21 +138,65 @@ function App() {
     else setCart([...cart, { ...product, quantity: 1 }]);
   }
 
+  function removeFromCart(productId) {
+    setCart(cart.filter(item => item.id !== productId));
+  }
+
   async function saveOrder() {
+    if (cart.length === 0) return notify("El carrito está vacío", "error");
+    
     let orderId = activeOrder?.id;
-    const cartTotal = cart.reduce((s,i)=>s+(i.price*i.quantity),0);
-    if (!orderId) {
-      const { data: ord } = await supabase.from("orders").insert([{ total: cartTotal, table_id: selectedTable.id, status: "open" }]).select().single();
-      orderId = ord.id;
-      await supabase.from("tables").update({ status: "occupied" }).eq("id", selectedTable.id);
-    } else {
-      await supabase.from("orders").update({ total: activeOrder.total + cartTotal, status: "open" }).eq("id", orderId);
+    const cartTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+    const userEmail = session?.user?.email || "usuario@restaurante.com";
+
+    try {
+      if (!orderId) {
+        const { data: ord, error: errOrd } = await supabase
+          .from("orders")
+          .insert([{ 
+            total: cartTotal, 
+            table_id: selectedTable.id, 
+            status: "open", 
+            waiter_email: userEmail 
+          }])
+          .select()
+          .single();
+        
+        if (errOrd) throw errOrd;
+        orderId = ord.id;
+        await supabase.from("tables").update({ status: "occupied" }).eq("id", selectedTable.id);
+      } else {
+        const { error: errUpd } = await supabase
+          .from("orders")
+          .update({ 
+            total: (activeOrder.total || 0) + cartTotal, 
+            status: "open", 
+            waiter_email: userEmail 
+          })
+          .eq("id", orderId);
+        if (errUpd) throw errUpd;
+      }
+
+      for (const item of cart) {
+        await supabase.from("order_items").insert([{ 
+          order_id: orderId, 
+          product_id: item.id, 
+          quantity: item.quantity, 
+          price: item.price, 
+          is_new: true 
+        }]);
+        if (item.stock !== undefined) {
+          await supabase.from("products").update({ stock: item.stock - item.quantity }).eq("id", item.id);
+        }
+      }
+
+      setCart([]); 
+      getData(); 
+      notify("✅ Pedido enviado a cocina");
+    } catch (error) {
+      console.error(error);
+      notify("Error al guardar: " + error.message, "error");
     }
-    for (const item of cart) {
-      await supabase.from("order_items").insert([{ order_id: orderId, product_id: item.id, quantity: item.quantity, price: item.price, is_new: true }]);
-      await supabase.from("products").update({ stock: item.stock - item.quantity }).eq("id", item.id);
-    }
-    setCart([]); getData(); notify("Pedido enviado");
   }
 
   async function markDelivered(id) {
@@ -171,6 +215,19 @@ function App() {
     setSelectedTable(null); getData(); notify("Cuenta cobrada"); setShowConfirm({ show: false });
   }
 
+  // --- FUNCIÓN PARA AGRUPAR ITEMS (SOLUCIÓN PUNTO 1) ---
+  function getGroupedItems(items) {
+    const grouped = {};
+    items.forEach(oi => {
+      const key = `${oi.product_id}-${oi.is_new}`;
+      if (!grouped[key]) {
+        grouped[key] = { ...oi, quantity: 0 };
+      }
+      grouped[key].quantity += oi.quantity;
+    });
+    return Object.values(grouped);
+  }
+
   if (!session) return <Login />;
   const isAdmin = session.user.email.toLowerCase().includes("admin");
 
@@ -187,6 +244,7 @@ function App() {
         @media (max-width: 600px) { .table-btn-grid { grid-template-columns: repeat(3, 1fr) !important; } }
       `}</style>
 
+      {/* Notificaciones y Confirmaciones */}
       {notification.show && (
         <div style={{ position: 'fixed', top: '20px', right: '20px', padding: '15px 25px', borderRadius: '10px', background: notification.type === 'success' ? '#22c55e' : '#ef4444', color: 'white', zIndex: 9999, fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
           {notification.msg}
@@ -210,6 +268,7 @@ function App() {
         <button onClick={() => supabase.auth.signOut()} style={{ background: "#ef4444", color: "white", border: "none", padding: "6px 12px", borderRadius: "6px", fontWeight: "bold" }}>Salir</button>
       </nav>
 
+      {/* VISTA ADMIN (Sin cambios) */}
       {view === "admin" && (
         <>
           <div className="grid-cards">
@@ -296,7 +355,12 @@ function App() {
 
           {adminTab === 'bodega' && (
             <div style={sectionStyle}>
-              <h3>Control de Bodega (Insumos)</h3>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px'}}>
+                <h3>Control de Bodega (Insumos)</h3>
+                <div style={{background: '#1e293b', color: 'white', padding: '8px 15px', borderRadius: '8px', fontWeight: 'bold'}}>
+                  Total Bodega: ${warehouse.reduce((s, i) => s + (i.quantity * i.unit_cost), 0)}
+                </div>
+              </div>
               <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px', padding: '15px', background: '#f8fafc', borderRadius: '10px'}}>
                 <input type="text" placeholder="Insumo" value={newW.name} onChange={e => setNewW({...newW, name: e.target.value})} style={inputStyle} />
                 <input type="number" placeholder="Cantidad" value={newW.quantity} onChange={e => setNewW({...newW, quantity: e.target.value})} style={{...inputStyle, width: '100px'}} />
@@ -349,20 +413,33 @@ function App() {
           {adminTab === 'auditoria' && (
             <div style={sectionStyle}>
               <h3>Auditoría (Ventas Archivadas)</h3>
-              <div style={{marginBottom: '20px'}}><input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...inputStyle, width: '100%'}} /></div>
-              <div style={{maxHeight: '400px', overflowY: 'auto'}}>
-                {orders.filter(o => o.status === 'archived' && (searchTerm === "" || o.created_at.includes(searchTerm) || o.order_items.some(oi => oi.products?.name.toLowerCase().includes(searchTerm.toLowerCase())))).sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(o => (
-                  <div key={o.id} style={{padding: '12px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                    <div><span style={{fontWeight: 'bold', fontSize: '0.9rem'}}>{new Date(o.created_at).toLocaleDateString()} - Mesa {o.tables?.number}</span><div style={{fontSize: '0.8rem', color: '#64748b'}}>{o.order_items.map(oi => `${oi.quantity}x ${oi.products?.name}`).join(', ')}</div></div>
-                    <span style={{fontWeight: 'bold'}}>${o.total}</span>
-                  </div>
-                ))}
+              <div style={{marginBottom: '20px'}}>
+                <input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{...inputStyle, width: '100%'}} />
+              </div>
+              <div style={{overflowX: 'auto'}}>
+                <table style={{ width: "100%", borderCollapse: 'collapse' }}>
+                  <thead style={{background: '#f8fafc', textAlign: 'left'}}>
+                    <tr><th style={thStyle}>Fecha</th><th style={thStyle}>Mesa</th><th style={thStyle}>Usuario</th><th style={thStyle}>Productos</th><th style={thStyle}>Total</th></tr>
+                  </thead>
+                  <tbody>
+                    {orders.filter(o => o.status === 'archived' && (searchTerm === "" || o.created_at.includes(searchTerm) || o.waiter_email?.toLowerCase().includes(searchTerm.toLowerCase()) || o.order_items.some(oi => oi.products?.name.toLowerCase().includes(searchTerm.toLowerCase())))).sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map(o => (
+                      <tr key={o.id} style={{borderBottom: '1px solid #f1f5f9'}}>
+                        <td style={tdStyle}>{new Date(o.created_at).toLocaleDateString()}</td>
+                        <td style={tdStyle}>Mesa {o.tables?.number}</td>
+                        <td style={tdStyle}><small style={{color: '#3b82f6'}}>{o.waiter_email || 'N/A'}</small></td>
+                        <td style={tdStyle}><div style={{fontSize: '0.8rem', color: '#64748b'}}>{o.order_items.map(oi => `${oi.quantity}x ${oi.products?.name}`).join(', ')}</div></td>
+                        <td style={{...tdStyle, fontWeight: 'bold'}}>${o.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
         </>
       )}
 
+      {/* VISTA MESERO (SOLUCIÓN PUNTOS 1 Y 2) */}
       {view === "mesero" && (
         <div className="main-grid">
           <div style={sectionStyle}>
@@ -390,6 +467,13 @@ function App() {
                 </div>
                 {cart.length > 0 && (
                   <div style={{ background: "#f8fafc", padding: "15px", borderRadius: "10px" }}>
+                    <h4 style={{marginTop: 0}}>Carrito</h4>
+                    {cart.map(item => (
+                      <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', marginBottom: '5px', fontSize: '0.9rem', alignItems: 'center'}}>
+                        <span>{item.quantity}x {item.name}</span>
+                        <button onClick={() => removeFromCart(item.id)} style={{background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', padding: '5px'}}>X</button>
+                      </div>
+                    ))}
                     <button onClick={saveOrder} style={{ width: "100%", background: "#3b82f6", color: "white", border: "none", padding: "12px", marginTop: "10px", borderRadius: "8px", fontWeight: "bold" }}>ENVIAR A COCINA</button>
                   </div>
                 )}
@@ -401,23 +485,35 @@ function App() {
             <h3 style={{marginTop: 0}}>Mesa {selectedTable?.number || "--"}</h3>
             {activeOrder && (
               <div>
+                {/* SOLUCIÓN PUNTO 2: DETALLE DE QUÉ LLEVAR A LA MESA */}
                 {activeOrder.status === 'ready' && (
                   <div style={{ background: "#fff3cd", border: "2px solid #fbbf24", padding: "15px", borderRadius: "10px", marginBottom: "15px" }}>
                     <p style={{ margin: "0 0 5px 0", fontWeight: "bold", color: "#856404" }}>🔔 ¡LISTO PARA SERVIR!</p>
+                    <div style={{marginBottom: '10px', fontSize: '0.9rem'}}>
+                      <strong>Debes llevar:</strong><br/>
+                      {getGroupedItems(activeOrder.order_items.filter(oi => oi.is_new)).map((oi, idx) => (
+                        <div key={idx}>• {oi.quantity}x {oi.products?.name}</div>
+                      ))}
+                    </div>
                     <button onClick={() => markDelivered(activeOrder.id)} style={{ width: "100%", background: "#fbbf24", border: "none", padding: "10px", borderRadius: "5px", fontWeight: 'bold' }}>MARCAR COMO ENTREGADO</button>
                   </div>
                 )}
+
+                {/* SOLUCIÓN PUNTO 1: AGRUPAR ITEMS EN LA VISUALIZACIÓN */}
                 <div style={{ marginBottom: "20px" }}>
-                  {activeOrder.order_items.map((oi, i) => (
-                    <div key={i} style={{ padding: "5px 0", borderBottom: "1px solid #f1f5f9", display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{oi.quantity}x {oi.products?.name} {oi.is_new ? "(Cocinando)" : "(Servido)"}</span>
-                      <span>${oi.price * oi.quantity}</span>
+                  {getGroupedItems(activeOrder.order_items).map((oi, i) => (
+                    <div key={i} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{flex: 1}}>
+                        <div style={{fontWeight: 'bold'}}>{oi.quantity}x {oi.products?.name}</div>
+                        <small style={{color: oi.is_new ? '#3b82f6' : '#64748b'}}>{oi.is_new ? "(En Cocina)" : "(Servido)"}</small>
+                      </div>
+                      <span style={{fontWeight: 'bold'}}>${oi.price * oi.quantity}</span>
                     </div>
                   ))}
                 </div>
+
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#22c55e', textAlign: 'right', marginBottom: '15px' }}>Total: ${activeOrder.total}</div>
                 
-                {/* BOTON DE COBRO CON BLOQUEO */}
                 <button 
                   onClick={() => {
                     if (activeOrder.status === 'open' || activeOrder.status === 'ready') {
@@ -440,12 +536,13 @@ function App() {
         </div>
       )}
 
+      {/* COCINA */}
       {view === "cocina" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "20px" }}>
           {orders.filter(o => o.status === "open").map(o => (
             <div key={o.id} style={{...sectionStyle, borderTop: '6px solid #3b82f6'}}>
               <h2 style={{marginTop: 0}}>Mesa {o.tables?.number}</h2>
-              {o.order_items.filter(oi => oi.is_new).map((oi, i) => (
+              {getGroupedItems(o.order_items.filter(oi => oi.is_new)).map((oi, i) => (
                 <div key={i} style={{fontSize: '1.2rem', padding: '5px 0', borderBottom: '1px dashed #eee'}}><b>{oi.quantity}x</b> {oi.products?.name}</div>
               ))}
               <button onClick={async () => { await supabase.from("orders").update({ status: "ready" }).eq("id", o.id); getData(); notify("Orden terminada"); }} style={{ width: "100%", background: "#22c55e", color: "white", border: "none", padding: "15px", borderRadius: '8px', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '10px' }}>ORDEN LISTA</button>
@@ -454,6 +551,7 @@ function App() {
         </div>
       )}
 
+      {/* MODAL EDITAR */}
       {editingProduct && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000 }}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '15px', width: '300px' }}>
