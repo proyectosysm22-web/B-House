@@ -5,6 +5,13 @@ async function must(result, fallbackMessage) {
   return result.data;
 }
 
+function normalizeCategory(rawCategory) {
+  const value = String(rawCategory || "comida").toLowerCase().trim();
+  if (value === "bebida" || value === "bebidas") return "bebida";
+  if (value === "ceramica" || value === "ceramicas") return "ceramica";
+  return "comida";
+}
+
 export const dataService = {
   auth: supabase.auth,
 
@@ -151,6 +158,7 @@ export const dataService = {
   async saveOrder({ activeOrder, selectedTable, cart, userEmail }) {
     let orderId = activeOrder?.id;
     const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const cartHasFood = cart.some((item) => normalizeCategory(item.category) === "comida");
 
     if (!orderId) {
       const created = await must(
@@ -160,7 +168,7 @@ export const dataService = {
             {
               total: cartTotal,
               table_id: selectedTable.id,
-              status: "open",
+              status: cartHasFood ? "open" : "ready",
               waiter_email: userEmail,
             },
           ])
@@ -175,12 +183,15 @@ export const dataService = {
         "No se pudo actualizar la mesa",
       );
     } else {
+      const nextStatus =
+        activeOrder?.status === "open" ? "open" : cartHasFood ? "open" : "ready";
+
       await must(
         await supabase
           .from("orders")
           .update({
             total: (activeOrder.total || 0) + cartTotal,
-            status: "open",
+            status: nextStatus,
             waiter_email: userEmail,
           })
           .eq("id", orderId),
@@ -210,6 +221,8 @@ export const dataService = {
         "No se pudo actualizar stock",
       );
     }
+
+    return { status: cartHasFood ? "open" : "ready" };
   },
 
   async markDelivered(orderId) {

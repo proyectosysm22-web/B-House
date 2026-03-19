@@ -145,10 +145,11 @@ function App() {
 
     try {
       const userEmail = session?.user?.email || "usuario@restaurante.com";
-      await dataService.saveOrder({ activeOrder, selectedTable, cart, userEmail });
+      const result = await dataService.saveOrder({ activeOrder, selectedTable, cart, userEmail });
       setCart([]);
       await getData();
-      notify("Pedido enviado a cocina");
+      if (result?.status === "ready") notify("Pedido listo para entregar (sin cocina)");
+      else notify("Pedido enviado a cocina");
     } catch (error) {
       notify("Error al guardar: " + error.message, "error");
     }
