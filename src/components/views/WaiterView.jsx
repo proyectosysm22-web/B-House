@@ -2,6 +2,13 @@ import { useMemo, useState } from "react";
 import { sectionStyle } from "../../styles/uiStyles";
 import { getGroupedItems } from "../../utils/orderUtils";
 
+function normalizeCategory(rawCategory) {
+  const value = String(rawCategory || "comida").toLowerCase().trim();
+  if (value === "bebida" || value === "bebidas") return "bebida";
+  if (value === "ceramica" || value === "ceramicas") return "ceramica";
+  return "comida";
+}
+
 export default function WaiterView({
   tables,
   orders,
@@ -23,7 +30,7 @@ export default function WaiterView({
         (product) =>
           product.is_active &&
           product.stock > 0 &&
-          (product.category || "comida") === menuTab,
+          normalizeCategory(product.category) === menuTab,
       ),
     [products, menuTab],
   );
@@ -60,9 +67,10 @@ export default function WaiterView({
         </div>
         {selectedTable && (
           <>
+            <h4 style={{ marginBottom: "10px" }}>Menu Disponible</h4>
             <div style={{ display: "flex", gap: "8px", marginBottom: "10px", flexWrap: "wrap" }}>
               {[
-                { value: "comida", label: "Menu Disponible" },
+                { value: "comida", label: "Banderillas" },
                 { value: "bebida", label: "Bebidas" },
                 { value: "ceramica", label: "Ceramicas" },
               ].map((tab) => (
