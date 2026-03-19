@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { dataService } from "./services/dataService";
+import logoMark from "./assets/branding/logo-mark.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -47,6 +48,9 @@ export default function Login() {
           maxWidth: "350px" 
         }}
       >
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px" }}>
+          <img src={logoMark} alt="Logo Banderillas" style={{ width: "96px", height: "96px", objectFit: "contain", opacity: 0.26 }} />
+        </div>
         <h2 style={{ textAlign: "center", color: "#333", marginBottom: "10px" }}>Bienvenido</h2>
         <p style={{ textAlign: "center", color: "#666", marginBottom: "30px" }}>Ingresa a tu cuenta de Banderillas</p>
 

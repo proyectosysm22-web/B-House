@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { sectionStyle } from "../../styles/uiStyles";
+import logoMark from "../../assets/branding/logo-mark.png";
 
 function groupedBillItems(orderItems) {
   const grouped = {};
@@ -57,7 +58,18 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
         <head>
           <title>Factura ${invoice.invoice_number}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 16px; color: #111; }
+            body { font-family: Arial, sans-serif; padding: 16px; color: #111; position: relative; }
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              width: 320px;
+              transform: translate(-50%, -50%);
+              opacity: 0.08;
+              z-index: 0;
+              pointer-events: none;
+            }
+            .content { position: relative; z-index: 1; }
             .title { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
             .muted { color: #444; font-size: 12px; margin-bottom: 10px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -67,17 +79,20 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
           </style>
         </head>
         <body>
-          <div class="title">Factura ${invoice.invoice_number}</div>
-          <div class="muted">Fecha: ${issueDate}</div>
-          <div class="muted">Mesa: ${invoice.table_number || "-"} | Metodo de pago: ${invoice.payment_method}</div>
-          <div class="muted">Mesero: ${invoice.waiter_email || "N/A"} | Caja: ${invoice.cashier_email || "N/A"}</div>
-          <table>
-            <thead>
-              <tr><th>Producto</th><th style="text-align:right">Cant</th><th style="text-align:right">Valor</th><th style="text-align:right">Subtotal</th></tr>
-            </thead>
-            <tbody>${itemRows}</tbody>
-          </table>
-          <div class="total">TOTAL: $${invoice.total}</div>
+          <img class="watermark" src="${logoMark}" alt="logo" />
+          <div class="content">
+            <div class="title">Factura ${invoice.invoice_number}</div>
+            <div class="muted">Fecha: ${issueDate}</div>
+            <div class="muted">Mesa: ${invoice.table_number || "-"} | Metodo de pago: ${invoice.payment_method}</div>
+            <div class="muted">Mesero: ${invoice.waiter_email || "N/A"} | Caja: ${invoice.cashier_email || "N/A"}</div>
+            <table>
+              <thead>
+                <tr><th>Producto</th><th style="text-align:right">Cant</th><th style="text-align:right">Valor</th><th style="text-align:right">Subtotal</th></tr>
+              </thead>
+              <tbody>${itemRows}</tbody>
+            </table>
+            <div class="total">TOTAL: $${invoice.total}</div>
+          </div>
         </body>
       </html>
     `;
