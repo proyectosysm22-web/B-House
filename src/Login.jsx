@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "./supabaseClient";
+import { dataService } from "./services/dataService";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,7 +11,7 @@ export default function Login() {
     setLoading(true);
 
     // .trim() elimina espacios accidentales al inicio o final del correo
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await dataService.auth.signInWithPassword({
       email: email.trim(),
       password: password,
     });
