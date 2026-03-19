@@ -21,6 +21,7 @@ function groupedBillItems(orderItems) {
 export default function CashierView({ tables, orders, onChargeOrder, notify }) {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
+  const [lastInvoice, setLastInvoice] = useState(null);
 
   const payableOrders = useMemo(
     () => orders.filter((order) => ["open", "ready", "delivered"].includes(order.status)),
@@ -41,6 +42,52 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
   const selectedEntry = payableTables.find((entry) => entry.table.id === selectedTableId) || null;
   const selectedOrder = selectedEntry?.order || null;
   const billItems = selectedOrder ? groupedBillItems(selectedOrder.order_items || []) : [];
+
+  function printInvoice(invoice) {
+    const issueDate = new Date(invoice.issued_at).toLocaleString();
+    const itemRows = invoice.items
+      .map(
+        (item) =>
+          `<tr><td>${item.product_name}</td><td style="text-align:right">${item.quantity}</td><td style="text-align:right">$${item.unit_price}</td><td style="text-align:right">$${item.line_total}</td></tr>`,
+      )
+      .join("");
+
+    const html = `
+      <html>
+        <head>
+          <title>Factura ${invoice.invoice_number}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 16px; color: #111; }
+            .title { font-size: 20px; font-weight: bold; margin-bottom: 4px; }
+            .muted { color: #444; font-size: 12px; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border-bottom: 1px solid #ddd; padding: 6px 4px; font-size: 12px; }
+            th { text-align: left; background: #f5f5f5; }
+            .total { text-align: right; margin-top: 10px; font-size: 18px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="title">Factura ${invoice.invoice_number}</div>
+          <div class="muted">Fecha: ${issueDate}</div>
+          <div class="muted">Mesa: ${invoice.table_number || "-"} | Metodo de pago: ${invoice.payment_method}</div>
+          <div class="muted">Mesero: ${invoice.waiter_email || "N/A"} | Caja: ${invoice.cashier_email || "N/A"}</div>
+          <table>
+            <thead>
+              <tr><th>Producto</th><th style="text-align:right">Cant</th><th style="text-align:right">Valor</th><th style="text-align:right">Subtotal</th></tr>
+            </thead>
+            <tbody>${itemRows}</tbody>
+          </table>
+          <div class="total">TOTAL: $${invoice.total}</div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
 
   return (
     <div className="main-grid">
@@ -145,12 +192,16 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
             </div>
 
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (selectedOrder.status !== "delivered") {
                   notify("Aun no se puede cobrar: el pedido no esta entregado", "error");
                   return;
                 }
-                onChargeOrder(selectedOrder, paymentMethod);
+                const invoice = await onChargeOrder(selectedOrder, paymentMethod);
+                if (invoice) {
+                  setLastInvoice(invoice);
+                  setSelectedTableId(null);
+                }
               }}
               style={{
                 width: "100%",
@@ -164,11 +215,32 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
                 cursor: "pointer",
               }}
             >
-              COBRAR MESA
+              COBRAR Y FACTURAR
             </button>
           </>
         )}
       </div>
+
+      {lastInvoice && (
+        <div style={{ ...sectionStyle, gridColumn: "1 / -1" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Factura generada: {lastInvoice.invoice_number}</h3>
+              <div style={{ fontSize: "13px", color: "#334155", marginTop: "4px" }}>
+                Mesa {lastInvoice.table_number || "-"} | Total ${lastInvoice.total} | {lastInvoice.payment_method}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => printInvoice(lastInvoice)} style={{ border: "none", borderRadius: "8px", padding: "10px 12px", background: "#0f172a", color: "white", fontWeight: "bold", cursor: "pointer" }}>
+                Imprimir factura
+              </button>
+              <button onClick={() => setLastInvoice(null)} style={{ border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px 12px", background: "white", fontWeight: "bold", cursor: "pointer" }}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

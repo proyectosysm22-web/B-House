@@ -25,11 +25,11 @@ export const dataService = {
       supabase.from("tables").select("*").order("number", { ascending: true }),
       supabase
         .from("orders")
-        .select("*, tables(number), order_items(id, product_id, quantity, price, is_new, products(name))")
+        .select("*, tables(number), order_items(id, product_id, quantity, price, is_new, products(name, category))")
         .in("status", ["open", "ready", "delivered", "archived"]),
       supabase
         .from("orders")
-        .select("*, tables(number), order_items(quantity, price, products(name))")
+        .select("*, tables(number), order_items(quantity, price, products(name, category))")
         .eq("status", "closed"),
       supabase.from("warehouse").select("*").order("name", { ascending: true }),
     ]);
@@ -64,7 +64,29 @@ export const dataService = {
     if (toDelete.length > 0) {
       const occupied = toDelete.some((table) => table.status === "occupied");
       if (occupied) throw new Error("No puedes eliminar mesas ocupadas");
-      await must(await supabase.from("tables").delete().in("id", toDelete.map((table) => table.id)), "No se pudieron eliminar mesas");
+
+      const tableIdsToDelete = toDelete.map((table) => table.id);
+      const relatedOrders = await must(
+        await supabase.from("orders").select("id, table_id").in("table_id", tableIdsToDelete),
+        "No se pudo validar historial de mesas",
+      );
+
+      const tablesWithHistory = new Set(relatedOrders.map((order) => order.table_id));
+      if (tablesWithHistory.size > 0) {
+        const blockedNumbers = toDelete
+          .filter((table) => tablesWithHistory.has(table.id))
+          .map((table) => table.number)
+          .sort((a, b) => a - b);
+
+        throw new Error(
+          `No se pueden eliminar mesas con historial de pedidos: ${blockedNumbers.join(", ")}.`,
+        );
+      }
+
+      await must(
+        await supabase.from("tables").delete().in("id", tableIdsToDelete),
+        "No se pudieron eliminar mesas",
+      );
     }
   },
 
@@ -90,17 +112,23 @@ export const dataService = {
   },
 
   async addProduct(payload) {
-    await must(
-      await supabase.from("products").insert([
-        {
-          name: payload.name,
-          price: parseFloat(payload.price || 0),
-          stock: parseInt(payload.stock || 0, 10),
-          is_active: true,
-        },
-      ]),
-      "No se pudo crear el producto",
-    );
+    let result = await supabase.from("products").insert([
+      {
+        name: payload.name,
+        price: parseFloat(payload.price || 0),
+        stock: parseInt(payload.stock || 0, 10),
+        category: payload.category || "comida",
+        is_active: true,
+      },
+    ]);
+
+    if (result.error && result.error.message?.toLowerCase().includes("category")) {
+      throw new Error(
+        "Falta la columna category en products. Ejecuta la migracion SQL para categorias.",
+      );
+    }
+
+    await must(result, "No se pudo crear el producto");
   },
 
   async toggleProductStatus(product) {
@@ -202,7 +230,62 @@ export const dataService = {
     );
   },
 
-  async closeOrder(orderId, tableId, paymentMethod) {
+  async nextInvoiceNumber() {
+    const latest = await must(
+      await supabase.from("invoices").select("invoice_number").order("created_at", { ascending: false }).limit(1),
+      "No se pudo consultar consecutivo de factura",
+    );
+
+    const current = latest?.[0]?.invoice_number || "FAC-000000";
+    const currentNumber = parseInt((current.split("-")[1] || "0"), 10);
+    const nextNumber = currentNumber + 1;
+    return `FAC-${String(nextNumber).padStart(6, "0")}`;
+  },
+
+  async chargeOrderWithInvoice({ order, tableNumber, paymentMethod, cashierEmail }) {
+    const invoiceNumber = await dataService.nextInvoiceNumber();
+    const subtotal = order.order_items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const total = order.total;
+
+    const invoice = await must(
+      await supabase
+        .from("invoices")
+        .insert([
+          {
+            invoice_number: invoiceNumber,
+            order_id: order.id,
+            table_id: order.table_id,
+            table_number: tableNumber,
+            waiter_email: order.waiter_email || null,
+            cashier_email: cashierEmail || null,
+            payment_method: paymentMethod,
+            subtotal,
+            tax: 0,
+            total,
+            status: "issued",
+            issued_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single(),
+      "No se pudo crear la factura",
+    );
+
+    const invoiceItems = order.order_items.map((item) => ({
+      invoice_id: invoice.id,
+      product_id: item.product_id,
+      product_name: item.products?.name || "Producto",
+      category: item.products?.category || "comida",
+      quantity: item.quantity,
+      unit_price: item.price,
+      line_total: item.price * item.quantity,
+    }));
+
+    await must(
+      await supabase.from("invoice_items").insert(invoiceItems),
+      "No se pudo guardar detalle de factura",
+    );
+
     let updateOrderResult = await supabase
       .from("orders")
       .update({
@@ -210,16 +293,21 @@ export const dataService = {
         payment_method: paymentMethod,
         paid_at: new Date().toISOString(),
       })
-      .eq("id", orderId);
+      .eq("id", order.id);
 
     if (updateOrderResult.error && updateOrderResult.error.message?.toLowerCase().includes("column")) {
-      updateOrderResult = await supabase.from("orders").update({ status: "closed" }).eq("id", orderId);
+      updateOrderResult = await supabase.from("orders").update({ status: "closed" }).eq("id", order.id);
     }
 
     await must(updateOrderResult, "No se pudo cerrar el pedido");
     await must(
-      await supabase.from("tables").update({ status: "free" }).eq("id", tableId),
+      await supabase.from("tables").update({ status: "free" }).eq("id", order.table_id),
       "No se pudo liberar la mesa",
     );
+
+    return {
+      ...invoice,
+      items: invoiceItems,
+    };
   },
 };

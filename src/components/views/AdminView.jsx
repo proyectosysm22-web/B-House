@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { cardStyle, inputStyle, sectionStyle, tdStyle, thStyle } from "../../styles/uiStyles";
 
 export default function AdminView({
@@ -26,6 +27,15 @@ export default function AdminView({
   searchTerm,
   setSearchTerm,
 }) {
+  const [productFilter, setProductFilter] = useState("todos");
+  const filteredProducts = useMemo(
+    () =>
+      products.filter(
+        (product) => productFilter === "todos" || (product.category || "comida") === productFilter,
+      ),
+    [products, productFilter],
+  );
+
   return (
     <>
       <div className="grid-cards">
@@ -95,16 +105,45 @@ export default function AdminView({
       {adminTab === "productos" && (
         <div style={sectionStyle}>
           <h3>Gestion de Menu</h3>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+            {[
+              { value: "todos", label: "Todos" },
+              { value: "comida", label: "Comida" },
+              { value: "bebida", label: "Bebidas" },
+              { value: "ceramica", label: "Ceramicas" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                onClick={() => setProductFilter(option.value)}
+                style={{
+                  borderRadius: "999px",
+                  border: productFilter === option.value ? "2px solid #2563eb" : "1px solid #cbd5e1",
+                  background: productFilter === option.value ? "#dbeafe" : "white",
+                  fontWeight: "bold",
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", padding: "15px", background: "#f8fafc", borderRadius: "10px" }}>
             <input type="text" placeholder="Nombre" value={newP.name} onChange={(e) => setNewP({ ...newP, name: e.target.value })} style={inputStyle} />
             <input type="number" placeholder="Precio" value={newP.price} onChange={(e) => setNewP({ ...newP, price: e.target.value })} style={{ ...inputStyle, width: "100px" }} />
             <input type="number" placeholder="Stock" value={newP.stock} onChange={(e) => setNewP({ ...newP, stock: e.target.value })} style={{ ...inputStyle, width: "100px" }} />
+            <select value={newP.category || "comida"} onChange={(e) => setNewP({ ...newP, category: e.target.value })} style={{ ...inputStyle, width: "130px" }}>
+              <option value="comida">Comida</option>
+              <option value="bebida">Bebida</option>
+              <option value="ceramica">Ceramica</option>
+            </select>
             <button onClick={addProduct} style={{ background: "#3b82f6", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "bold" }}>+ Anadir Producto</button>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead style={{ background: "#f8fafc", textAlign: "left" }}>
                 <tr>
+                  <th style={thStyle}>Categoria</th>
                   <th style={thStyle}>Producto</th>
                   <th style={thStyle}>Precio</th>
                   <th style={thStyle}>Stock</th>
@@ -113,8 +152,9 @@ export default function AdminView({
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {filteredProducts.map((p) => (
                   <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td style={tdStyle}>{(p.category || "comida").toUpperCase()}</td>
                     <td style={tdStyle}>{p.name}</td>
                     <td style={tdStyle}>${p.price}</td>
                     <td style={tdStyle}>{p.stock}</td>

@@ -30,7 +30,7 @@ function App() {
   const [editPrice, setEditPrice] = useState("");
   const [notification, setNotification] = useState({ show: false, msg: "", type: "success" });
   const [showConfirm, setShowConfirm] = useState({ show: false, action: null, msg: "" });
-  const [newP, setNewP] = useState({ name: "", price: "", stock: "" });
+  const [newP, setNewP] = useState({ name: "", price: "", stock: "", category: "comida" });
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -66,7 +66,7 @@ function App() {
 
   async function getData() {
     const snapshot = await dataService.getSnapshot();
-    setProducts(snapshot.products || []);
+    setProducts((snapshot.products || []).map((product) => ({ ...product, category: product.category || "comida" })));
     setTables(snapshot.tables || []);
     setOrders(snapshot.orders || []);
     setClosedOrders(snapshot.closedOrders || []);
@@ -113,7 +113,7 @@ function App() {
   async function addProduct() {
     if (!newP.name || !newP.price) return notify("Faltan datos", "error");
     await dataService.addProduct(newP);
-    setNewP({ name: "", price: "", stock: "" });
+    setNewP({ name: "", price: "", stock: "", category: newP.category || "comida" });
     await getData();
   }
 
@@ -173,11 +173,19 @@ function App() {
         notify("Aun no se puede cobrar: el pedido no esta entregado", "error");
         return;
       }
-      await dataService.closeOrder(order.id, order.table_id, paymentMethod);
+      const tableNumber = tables.find((table) => table.id === order.table_id)?.number || null;
+      const invoice = await dataService.chargeOrderWithInvoice({
+        order,
+        tableNumber,
+        paymentMethod,
+        cashierEmail: session?.user?.email || null,
+      });
       await getData();
       notify(`Cuenta cobrada por ${paymentMethod}`);
+      return invoice;
     } catch (error) {
       notify(error.message || "No se pudo cobrar la cuenta", "error");
+      return null;
     }
   }
 
