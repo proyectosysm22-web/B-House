@@ -14,9 +14,6 @@ export default function WaiterView({
   saveOrder,
   activeOrder,
   markDelivered,
-  notify,
-  setShowConfirm,
-  closeOrder,
 }) {
   return (
     <div className="main-grid">
@@ -116,28 +113,9 @@ export default function WaiterView({
             </div>
 
             <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#22c55e", textAlign: "right", marginBottom: "15px" }}>Total: ${activeOrder.total}</div>
-
-            <button
-              onClick={() => {
-                if (activeOrder.status === "open" || activeOrder.status === "ready") {
-                  notify("Pedido aun en cocina o por entregar. No se puede cobrar", "error");
-                } else {
-                  setShowConfirm({ show: true, msg: `Cobrar Mesa ${selectedTable.number}?`, action: closeOrder });
-                }
-              }}
-              style={{
-                width: "100%",
-                background: activeOrder.status === "open" || activeOrder.status === "ready" ? "#94a3b8" : "#22c55e",
-                color: "white",
-                border: "none",
-                padding: "15px",
-                borderRadius: "10px",
-                fontWeight: "bold",
-                fontSize: "1.1rem",
-              }}
-            >
-              {activeOrder.status === "open" || activeOrder.status === "ready" ? "PEDIDO EN CURSO..." : "COBRAR CUENTA"}
-            </button>
+            <div style={{ width: "100%", background: "#0f172a", color: "white", border: "none", padding: "14px", borderRadius: "10px", fontWeight: "bold", fontSize: "1rem", textAlign: "center" }}>
+              COBRO SOLO EN CAJA
+            </div>
           </div>
         )}
       </div>

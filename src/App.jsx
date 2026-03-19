@@ -7,6 +7,7 @@ import AppHeader from "./components/layout/AppHeader";
 import AdminView from "./components/views/AdminView";
 import WaiterView from "./components/views/WaiterView";
 import KitchenView from "./components/views/KitchenView";
+import CashierView from "./components/views/CashierView";
 import { appContainerStyle, globalCss } from "./styles/uiStyles";
 import { dataService } from "./services/dataService";
 
@@ -42,6 +43,7 @@ function App() {
     if (!session) return;
     const email = session.user.email.toLowerCase();
     if (email.includes("admin")) setView("admin");
+    else if (email.includes("caja")) setView("caja");
     else if (email.includes("cocina")) setView("cocina");
     else setView("mesero");
     getData();
@@ -164,16 +166,19 @@ function App() {
     notify("Orden terminada");
   }
 
-  async function closeOrder() {
-    if (!activeOrder || !selectedTable) return;
-    if (activeOrder.status === "open" || activeOrder.status === "ready") {
-      return notify("No se puede cobrar: aun hay productos por entregar", "error");
+  async function chargeOrder(order, paymentMethod) {
+    try {
+      if (!order) return;
+      if (order.status !== "delivered") {
+        notify("Aun no se puede cobrar: el pedido no esta entregado", "error");
+        return;
+      }
+      await dataService.closeOrder(order.id, order.table_id, paymentMethod);
+      await getData();
+      notify(`Cuenta cobrada por ${paymentMethod}`);
+    } catch (error) {
+      notify(error.message || "No se pudo cobrar la cuenta", "error");
     }
-    await dataService.closeOrder(activeOrder.id, selectedTable.id);
-    setSelectedTable(null);
-    setShowConfirm({ show: false });
-    await getData();
-    notify("Cuenta cobrada");
   }
 
   if (!session) return <Login />;
@@ -231,13 +236,11 @@ function App() {
           saveOrder={saveOrder}
           activeOrder={activeOrder}
           markDelivered={markDelivered}
-          notify={notify}
-          setShowConfirm={setShowConfirm}
-          closeOrder={closeOrder}
         />
       )}
 
       {view === "cocina" && <KitchenView orders={orders} markOrderReady={markOrderReady} />}
+      {view === "caja" && <CashierView tables={tables} orders={orders} onChargeOrder={chargeOrder} notify={notify} />}
 
       <EditProductModal
         editingProduct={editingProduct}
@@ -250,26 +253,40 @@ function App() {
       />
 
       {isAdmin && (
-        <button
-          onClick={() => setView(view === "admin" ? "mesero" : "admin")}
+        <div
           style={{
             position: "fixed",
-            bottom: "25px",
-            right: "25px",
-            width: "65px",
-            height: "65px",
-            borderRadius: "50%",
-            background: "#1e293b",
+            bottom: "20px",
+            right: "20px",
+            background: "#0f172a",
             color: "white",
-            border: "none",
-            fontSize: "28px",
-            cursor: "pointer",
-            boxShadow: "0 6px 15px rgba(0,0,0,0.4)",
-            zIndex: 100,
+            borderRadius: "12px",
+            padding: "8px",
+            display: "flex",
+            gap: "6px",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+            zIndex: 150,
           }}
         >
-          {view === "admin" ? "M" : "A"}
-        </button>
+          {["admin", "mesero", "cocina", "caja"].map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setView(mode)}
+              style={{
+                border: "none",
+                borderRadius: "8px",
+                padding: "8px 10px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                background: view === mode ? "#38bdf8" : "#1e293b",
+                color: "white",
+                textTransform: "capitalize",
+              }}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

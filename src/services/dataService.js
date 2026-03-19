@@ -48,25 +48,23 @@ export const dataService = {
       await supabase.from("tables").select("*").order("number", { ascending: true }),
       "No se pudo cargar mesas",
     );
-    const currentCount = tables.length;
 
-    if (newCount > currentCount) {
-      const toAdd = [];
-      for (let i = currentCount + 1; i <= newCount; i += 1) {
-        toAdd.push({ number: i, status: "free" });
+    const existingNumbers = new Set(tables.map((table) => table.number));
+    const toAdd = [];
+    for (let number = 1; number <= newCount; number += 1) {
+      if (!existingNumbers.has(number)) {
+        toAdd.push({ number, status: "free" });
       }
+    }
+    if (toAdd.length > 0) {
       await must(await supabase.from("tables").insert(toAdd), "No se pudieron crear mesas");
-    } else if (newCount < currentCount) {
-      const toDelete = tables.slice(newCount);
+    }
+
+    const toDelete = tables.filter((table) => table.number > newCount);
+    if (toDelete.length > 0) {
       const occupied = toDelete.some((table) => table.status === "occupied");
       if (occupied) throw new Error("No puedes eliminar mesas ocupadas");
-      await must(
-        await supabase
-          .from("tables")
-          .delete()
-          .in("id", toDelete.map((table) => table.id)),
-        "No se pudieron eliminar mesas",
-      );
+      await must(await supabase.from("tables").delete().in("id", toDelete.map((table) => table.id)), "No se pudieron eliminar mesas");
     }
   },
 
@@ -204,11 +202,21 @@ export const dataService = {
     );
   },
 
-  async closeOrder(orderId, tableId) {
-    await must(
-      await supabase.from("orders").update({ status: "closed" }).eq("id", orderId),
-      "No se pudo cerrar el pedido",
-    );
+  async closeOrder(orderId, tableId, paymentMethod) {
+    let updateOrderResult = await supabase
+      .from("orders")
+      .update({
+        status: "closed",
+        payment_method: paymentMethod,
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", orderId);
+
+    if (updateOrderResult.error && updateOrderResult.error.message?.toLowerCase().includes("column")) {
+      updateOrderResult = await supabase.from("orders").update({ status: "closed" }).eq("id", orderId);
+    }
+
+    await must(updateOrderResult, "No se pudo cerrar el pedido");
     await must(
       await supabase.from("tables").update({ status: "free" }).eq("id", tableId),
       "No se pudo liberar la mesa",

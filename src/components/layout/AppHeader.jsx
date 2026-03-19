@@ -13,7 +13,13 @@ export default function AppHeader({ view, onSignOut }) {
       }}
     >
       <h2 style={{ margin: 0, fontSize: "1.2rem" }}>
-        {view === "admin" ? "Admin Panel" : view === "cocina" ? "Cocina" : "Servicio"}
+        {view === "admin"
+          ? "Admin Panel"
+          : view === "cocina"
+            ? "Cocina"
+            : view === "caja"
+              ? "Caja"
+              : "Servicio"}
       </h2>
       <button
         onClick={onSignOut}
