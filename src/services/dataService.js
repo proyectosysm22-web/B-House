@@ -5,6 +5,15 @@ async function must(result, fallbackMessage) {
   return result.data;
 }
 
+function isMissingColumnError(error) {
+  const msg = error?.message?.toLowerCase?.() || "";
+  return msg.includes("column") || error?.code === "42703";
+}
+
+function isMissingTableError(error) {
+  return error?.code === "42P01";
+}
+
 function normalizeCategory(rawCategory) {
   const value = String(rawCategory || "comida").toLowerCase().trim();
   if (value === "bebida" || value === "bebidas") return "bebida";
@@ -27,7 +36,7 @@ export const dataService = {
   },
 
   async getSnapshot() {
-    const [p, t, o, co, w] = await Promise.all([
+    const [p, t, o, co, w, invoicesResult] = await Promise.all([
       supabase.from("products").select("*").order("name", { ascending: true }),
       supabase.from("tables").select("*").order("number", { ascending: true }),
       supabase
@@ -39,7 +48,18 @@ export const dataService = {
         .select("*, tables(number), order_items(quantity, price, products(name, category))")
         .eq("status", "closed"),
       supabase.from("warehouse").select("*").order("name", { ascending: true }),
+      supabase
+        .from("invoices")
+        .select("*, invoice_items(quantity, unit_price, line_total, product_name, category)")
+        .order("created_at", { ascending: false }),
     ]);
+
+    let invoices = [];
+    if (!invoicesResult.error) {
+      invoices = invoicesResult.data || [];
+    } else if (!isMissingTableError(invoicesResult.error)) {
+      throw new Error(invoicesResult.error.message || "No se pudo cargar facturas");
+    }
 
     return {
       products: await must(p, "No se pudo cargar productos"),
@@ -47,6 +67,7 @@ export const dataService = {
       orders: await must(o, "No se pudo cargar pedidos"),
       closedOrders: await must(co, "No se pudo cargar pedidos cerrados"),
       warehouse: await must(w, "No se pudo cargar bodega"),
+      invoices,
     };
   },
 
@@ -226,21 +247,32 @@ export const dataService = {
   },
 
   async markDelivered(orderId) {
-    await must(
-      await supabase.from("order_items").update({ is_new: false }).eq("order_id", orderId),
-      "No se pudieron marcar items como entregados",
-    );
-    await must(
-      await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId),
-      "No se pudo actualizar estado del pedido",
-    );
+    const markItemsResult = await supabase.from("order_items").update({ is_new: false }).eq("order_id", orderId);
+    await must(markItemsResult, "No se pudieron marcar items como entregados");
+
+    let updateOrderResult = await supabase
+      .from("orders")
+      .update({ status: "delivered", delivered_at: new Date().toISOString() })
+      .eq("id", orderId);
+
+    if (updateOrderResult.error && isMissingColumnError(updateOrderResult.error)) {
+      updateOrderResult = await supabase.from("orders").update({ status: "delivered" }).eq("id", orderId);
+    }
+
+    await must(updateOrderResult, "No se pudo actualizar estado del pedido");
   },
 
   async markOrderReady(orderId) {
-    await must(
-      await supabase.from("orders").update({ status: "ready" }).eq("id", orderId),
-      "No se pudo marcar pedido listo",
-    );
+    let updateOrderResult = await supabase
+      .from("orders")
+      .update({ status: "ready", ready_at: new Date().toISOString() })
+      .eq("id", orderId);
+
+    if (updateOrderResult.error && isMissingColumnError(updateOrderResult.error)) {
+      updateOrderResult = await supabase.from("orders").update({ status: "ready" }).eq("id", orderId);
+    }
+
+    await must(updateOrderResult, "No se pudo marcar pedido listo");
   },
 
   async nextInvoiceNumber() {

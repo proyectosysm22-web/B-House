@@ -19,6 +19,7 @@ function App() {
   const [view, setView] = useState("mesero");
   const [adminTab, setAdminTab] = useState("monitor");
   const [closedOrders, setClosedOrders] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [cart, setCart] = useState([]);
   const [activeOrder, setActiveOrder] = useState(null);
@@ -31,7 +32,6 @@ function App() {
   const [notification, setNotification] = useState({ show: false, msg: "", type: "success" });
   const [showConfirm, setShowConfirm] = useState({ show: false, action: null, msg: "" });
   const [newP, setNewP] = useState({ name: "", price: "", stock: "", category: "comida" });
-  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     dataService.auth.getSession().then(({ data: { session: nextSession } }) => setSession(nextSession));
@@ -70,6 +70,7 @@ function App() {
     setTables(snapshot.tables || []);
     setOrders(snapshot.orders || []);
     setClosedOrders(snapshot.closedOrders || []);
+    setInvoices(snapshot.invoices || []);
     setWarehouse(snapshot.warehouse || []);
     setTotalTablesInput(String(snapshot.tables?.length || 0));
   }
@@ -207,6 +208,7 @@ function App() {
           closedOrders={closedOrders}
           tables={tables}
           orders={orders}
+          invoices={invoices}
           adminTab={adminTab}
           setAdminTab={setAdminTab}
           totalTablesInput={totalTablesInput}
@@ -226,8 +228,6 @@ function App() {
           addWarehouseItem={addWarehouseItem}
           setShowConfirm={setShowConfirm}
           runCashCut={runCashCut}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
         />
       )}
 

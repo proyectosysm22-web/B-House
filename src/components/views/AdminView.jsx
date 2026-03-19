@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { cardStyle, inputStyle, sectionStyle, tdStyle, thStyle } from "../../styles/uiStyles";
+import AuditGlobalView from "./AuditGlobalView";
 
 export default function AdminView({
   closedOrders,
   tables,
   orders,
+  invoices,
   adminTab,
   setAdminTab,
   totalTablesInput,
@@ -24,8 +26,6 @@ export default function AdminView({
   addWarehouseItem,
   setShowConfirm,
   runCashCut,
-  searchTerm,
-  setSearchTerm,
 }) {
   const [productFilter, setProductFilter] = useState("todos");
   const filteredProducts = useMemo(
@@ -241,39 +241,7 @@ export default function AdminView({
       )}
 
       {adminTab === "auditoria" && (
-        <div style={sectionStyle}>
-          <h3>Auditoria (Ventas Archivadas)</h3>
-          <div style={{ marginBottom: "20px" }}>
-            <input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ ...inputStyle, width: "100%" }} />
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead style={{ background: "#f8fafc", textAlign: "left" }}>
-                <tr>
-                  <th style={thStyle}>Fecha</th>
-                  <th style={thStyle}>Mesa</th>
-                  <th style={thStyle}>Usuario</th>
-                  <th style={thStyle}>Productos</th>
-                  <th style={thStyle}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders
-                  .filter((o) => o.status === "archived" && (searchTerm === "" || o.created_at.includes(searchTerm) || o.waiter_email?.toLowerCase().includes(searchTerm.toLowerCase()) || o.order_items.some((oi) => oi.products?.name.toLowerCase().includes(searchTerm.toLowerCase()))))
-                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                  .map((o) => (
-                    <tr key={o.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={tdStyle}>{new Date(o.created_at).toLocaleDateString()}</td>
-                      <td style={tdStyle}>Mesa {o.tables?.number}</td>
-                      <td style={tdStyle}><small style={{ color: "#3b82f6" }}>{o.waiter_email || "N/A"}</small></td>
-                      <td style={tdStyle}><div style={{ fontSize: "0.8rem", color: "#64748b" }}>{o.order_items.map((oi) => `${oi.quantity}x ${oi.products?.name}`).join(", ")}</div></td>
-                      <td style={{ ...tdStyle, fontWeight: "bold" }}>${o.total}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AuditGlobalView orders={orders} closedOrders={closedOrders} invoices={invoices || []} />
       )}
     </>
   );
