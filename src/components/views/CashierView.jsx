@@ -116,8 +116,8 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
               onClick={() => setSelectedTableId(table.id)}
               style={{
                 textAlign: "left",
-                background: selectedTableId === table.id ? "#dbeafe" : "white",
-                border: "1px solid #cbd5e1",
+                background: selectedTableId === table.id ? "#fff1f1" : "white",
+                border: "1px solid #d7c7c0",
                 borderRadius: "10px",
                 padding: "12px",
                 cursor: "pointer",
@@ -130,8 +130,8 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
                     fontSize: "12px",
                     padding: "3px 8px",
                     borderRadius: "999px",
-                    background: order.status === "delivered" ? "#dcfce7" : "#fef3c7",
-                    color: order.status === "delivered" ? "#166534" : "#92400e",
+                    background: order.status === "delivered" ? "#ffe5e5" : "#fef3c7",
+                    color: order.status === "delivered" ? "#9f1d1d" : "#92400e",
                   }}
                 >
                   {order.status === "delivered" ? "Lista para cobro" : "En proceso"}
@@ -178,8 +178,8 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
                   flex: 1,
                   padding: "10px",
                   borderRadius: "8px",
-                  border: paymentMethod === "efectivo" ? "2px solid #16a34a" : "1px solid #cbd5e1",
-                  background: paymentMethod === "efectivo" ? "#dcfce7" : "white",
+                  border: paymentMethod === "efectivo" ? "2px solid #c62828" : "1px solid #d7c7c0",
+                  background: paymentMethod === "efectivo" ? "#fff1f1" : "white",
                   fontWeight: "bold",
                   cursor: "pointer",
                 }}
@@ -192,8 +192,8 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
                   flex: 1,
                   padding: "10px",
                   borderRadius: "8px",
-                  border: paymentMethod === "transferencia" ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                  background: paymentMethod === "transferencia" ? "#dbeafe" : "white",
+                  border: paymentMethod === "transferencia" ? "2px solid #1f1f1f" : "1px solid #d7c7c0",
+                  background: paymentMethod === "transferencia" ? "#f2f2f2" : "white",
                   fontWeight: "bold",
                   cursor: "pointer",
                 }}
@@ -202,7 +202,7 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
               </button>
             </div>
 
-            <div style={{ fontSize: "1.7rem", fontWeight: "bold", textAlign: "right", color: "#16a34a", marginBottom: "12px" }}>
+            <div style={{ fontSize: "1.7rem", fontWeight: "bold", textAlign: "right", color: "#c62828", marginBottom: "12px" }}>
               Total: ${selectedOrder.total}
             </div>
 
@@ -223,7 +223,7 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
                 padding: "14px",
                 borderRadius: "10px",
                 border: "none",
-                background: selectedOrder.status === "delivered" ? "#16a34a" : "#94a3b8",
+                background: selectedOrder.status === "delivered" ? "#c62828" : "#9ca3af",
                 color: "white",
                 fontWeight: "bold",
                 fontSize: "16px",
@@ -246,7 +246,7 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={() => printInvoice(lastInvoice)} style={{ border: "none", borderRadius: "8px", padding: "10px 12px", background: "#0f172a", color: "white", fontWeight: "bold", cursor: "pointer" }}>
+              <button onClick={() => printInvoice(lastInvoice)} style={{ border: "none", borderRadius: "8px", padding: "10px 12px", background: "#1f1f1f", color: "white", fontWeight: "bold", cursor: "pointer" }}>
                 Imprimir factura
               </button>
               <button onClick={() => setLastInvoice(null)} style={{ border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px 12px", background: "white", fontWeight: "bold", cursor: "pointer" }}>

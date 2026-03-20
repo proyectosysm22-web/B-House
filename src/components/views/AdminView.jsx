@@ -39,23 +39,23 @@ export default function AdminView({
   return (
     <>
       <div className="grid-cards">
-        <div style={cardStyle("#22c55e")}>
+        <div style={cardStyle("#c62828")}>
           <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Ventas Hoy</span>
           <div style={{ fontSize: "1.4rem", fontWeight: "bold" }}>${closedOrders.reduce((s, o) => s + o.total, 0)}</div>
         </div>
-        <div style={cardStyle("#3b82f6")}>
+        <div style={cardStyle("#1f1f1f")}>
           <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Mesas Ocupadas</span>
           <div style={{ fontSize: "1.4rem", fontWeight: "bold" }}>
             {tables.filter((t) => t.status === "occupied").length}/{tables.length}
           </div>
         </div>
-        <div style={cardStyle("#ef4444")}>
+        <div style={cardStyle("#b7791f")}>
           <span style={{ fontSize: "0.8rem", color: "#64748b" }}>En Cocina</span>
           <div style={{ fontSize: "1.4rem", fontWeight: "bold" }}>{orders.filter((o) => o.status === "open").length}</div>
         </div>
       </div>
 
-      <div style={{ display: "flex", background: "white", borderRadius: "10px", padding: "5px", marginBottom: "20px", overflowX: "auto" }}>
+      <div style={{ display: "flex", background: "#fff", border: "1px solid #efe4df", borderRadius: "10px", padding: "5px", marginBottom: "20px", overflowX: "auto" }}>
         <button className={`tab-btn ${adminTab === "monitor" ? "active" : ""}`} onClick={() => setAdminTab("monitor")}>Monitor</button>
         <button className={`tab-btn ${adminTab === "productos" ? "active" : ""}`} onClick={() => setAdminTab("productos")}>Menu/Precios</button>
         <button className={`tab-btn ${adminTab === "bodega" ? "active" : ""}`} onClick={() => setAdminTab("bodega")}>Bodega</button>
@@ -71,7 +71,7 @@ export default function AdminView({
               <div style={{ textAlign: "right" }}>
                 <small style={{ display: "block", color: "#64748b" }}>Control de Mesas</small>
                 <input type="number" value={totalTablesInput} onChange={(e) => setTotalTablesInput(e.target.value)} style={{ ...inputStyle, width: "60px", padding: "5px" }} />
-                <button onClick={updateTableCount} style={{ marginLeft: "5px", background: "#3b82f6", color: "white", border: "none", borderRadius: "4px", padding: "5px 10px", fontSize: "12px" }}>Guardar</button>
+                <button onClick={updateTableCount} style={{ marginLeft: "5px", background: "#c62828", color: "white", border: "1px solid #d85c5c", borderRadius: "6px", padding: "6px 11px", fontSize: "12px", fontWeight: "bold" }}>Guardar</button>
               </div>
             </div>
             {tables
@@ -84,17 +84,17 @@ export default function AdminView({
                       <strong style={{ display: "block" }}>Mesa {t.number}</strong>
                       <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{o?.order_items.map((oi) => `${oi.quantity} ${oi.products?.name}`).join(", ")}</span>
                     </div>
-                    <span style={{ fontWeight: "bold", color: "#22c55e" }}>${o?.total || 0}</span>
+                    <span style={{ fontWeight: "bold", color: "#c62828" }}>${o?.total || 0}</span>
                   </div>
                 );
               })}
           </div>
           <div style={sectionStyle}>
-            <h3 style={{ color: "#ef4444" }}>Alertas Stock Bajo</h3>
+            <h3 style={{ color: "#c62828" }}>Alertas Stock Bajo</h3>
             {products
               .filter((p) => p.stock < 10)
               .map((p) => (
-                <div key={p.id} style={{ fontSize: "0.9rem", padding: "8px", background: "#fef2f2", marginBottom: "5px", borderRadius: "6px", borderLeft: "4px solid #ef4444" }}>
+                <div key={p.id} style={{ fontSize: "0.9rem", padding: "8px", background: "#fff1f1", marginBottom: "5px", borderRadius: "6px", borderLeft: "4px solid #c62828" }}>
                   {p.name}: <b>{p.stock} unidades</b>
                 </div>
               ))}
@@ -117,8 +117,8 @@ export default function AdminView({
                 onClick={() => setProductFilter(option.value)}
                 style={{
                   borderRadius: "999px",
-                  border: productFilter === option.value ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                  background: productFilter === option.value ? "#dbeafe" : "white",
+                  border: productFilter === option.value ? "2px solid #c62828" : "1px solid #d7c7c0",
+                  background: productFilter === option.value ? "#fff1f1" : "white",
                   fontWeight: "bold",
                   padding: "6px 12px",
                   cursor: "pointer",
@@ -128,7 +128,7 @@ export default function AdminView({
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", padding: "15px", background: "#f8fafc", borderRadius: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", padding: "15px", background: "#fff6f3", borderRadius: "10px", border: "1px solid #efe4df" }}>
             <input type="text" placeholder="Nombre" value={newP.name} onChange={(e) => setNewP({ ...newP, name: e.target.value })} style={inputStyle} />
             <input type="number" placeholder="Precio" value={newP.price} onChange={(e) => setNewP({ ...newP, price: e.target.value })} style={{ ...inputStyle, width: "100px" }} />
             <input type="number" placeholder="Stock" value={newP.stock} onChange={(e) => setNewP({ ...newP, stock: e.target.value })} style={{ ...inputStyle, width: "100px" }} />
@@ -137,7 +137,7 @@ export default function AdminView({
               <option value="bebida">Bebida</option>
               <option value="ceramica">Ceramica</option>
             </select>
-            <button onClick={addProduct} style={{ background: "#3b82f6", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "bold" }}>+ Anadir Producto</button>
+            <button onClick={addProduct} style={{ background: "#c62828", color: "white", border: "1px solid #d85c5c", padding: "10px 20px", borderRadius: "8px", fontWeight: "bold" }}>+ Anadir Producto</button>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -163,7 +163,7 @@ export default function AdminView({
                       <button onClick={() => toggleProductStatus(p)} style={{ marginRight: "5px", padding: "5px", borderRadius: "4px", border: "1px solid #ccc" }}>
                         {p.is_active ? "Ocultar" : "Mostrar"}
                       </button>
-                      <button onClick={() => { setEditingProduct(p); setEditPrice(p.price); setEditStock(p.stock); }} style={{ padding: "5px", background: "#3b82f6", color: "white", border: "none", borderRadius: "4px" }}>
+                      <button onClick={() => { setEditingProduct(p); setEditPrice(p.price); setEditStock(p.stock); }} style={{ padding: "5px 8px", background: "#1f1f1f", color: "white", border: "none", borderRadius: "6px" }}>
                         Editar
                       </button>
                     </td>
@@ -179,15 +179,15 @@ export default function AdminView({
         <div style={sectionStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
             <h3>Control de Bodega (Insumos)</h3>
-            <div style={{ background: "#1e293b", color: "white", padding: "8px 15px", borderRadius: "8px", fontWeight: "bold" }}>
+            <div style={{ background: "#1f1f1f", color: "white", padding: "8px 15px", borderRadius: "8px", fontWeight: "bold" }}>
               Total Bodega: ${warehouse.reduce((s, i) => s + i.quantity * i.unit_cost, 0)}
             </div>
           </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", padding: "15px", background: "#f8fafc", borderRadius: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", padding: "15px", background: "#fff6f3", borderRadius: "10px", border: "1px solid #efe4df" }}>
             <input type="text" placeholder="Insumo" value={newW.name} onChange={(e) => setNewW({ ...newW, name: e.target.value })} style={inputStyle} />
             <input type="number" placeholder="Cantidad" value={newW.quantity} onChange={(e) => setNewW({ ...newW, quantity: e.target.value })} style={{ ...inputStyle, width: "100px" }} />
             <input type="number" placeholder="Costo Unit." value={newW.unit_cost} onChange={(e) => setNewW({ ...newW, unit_cost: e.target.value })} style={{ ...inputStyle, width: "100px" }} />
-            <button onClick={addWarehouseItem} style={{ background: "#22c55e", color: "white", border: "none", padding: "10px 20px", borderRadius: "8px", fontWeight: "bold" }}>Guardar Insumo</button>
+            <button onClick={addWarehouseItem} style={{ background: "#c62828", color: "white", border: "1px solid #d85c5c", padding: "10px 20px", borderRadius: "8px", fontWeight: "bold" }}>Guardar Insumo</button>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead style={{ background: "#f8fafc", textAlign: "left" }}>
@@ -218,7 +218,7 @@ export default function AdminView({
         <div style={sectionStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
             <h3>Historial de Ventas (Turno Actual)</h3>
-            <button onClick={() => setShowConfirm({ show: true, msg: "Cerrar caja y archivar ventas?", action: runCashCut })} style={{ background: "#000", color: "white", padding: "10px 15px", borderRadius: "8px", border: "none", fontWeight: "bold" }}>
+            <button onClick={() => setShowConfirm({ show: true, msg: "Cerrar caja y archivar ventas?", action: runCashCut })} style={{ background: "#1f1f1f", color: "white", padding: "10px 15px", borderRadius: "8px", border: "none", fontWeight: "bold" }}>
               CORTE DE CAJA
             </button>
           </div>
@@ -233,7 +233,7 @@ export default function AdminView({
               </div>
             ))}
           </div>
-          <div style={{ marginTop: "20px", padding: "15px", background: "#22c55e", color: "white", borderRadius: "10px", textAlign: "right" }}>
+          <div style={{ marginTop: "20px", padding: "15px", background: "#c62828", color: "white", borderRadius: "10px", textAlign: "right" }}>
             <span style={{ fontSize: "0.9rem" }}>TOTAL TURNO ACTUAL:</span>
             <div style={{ fontSize: "1.8rem", fontWeight: "bold" }}>${closedOrders.reduce((s, o) => s + o.total, 0)}</div>
           </div>

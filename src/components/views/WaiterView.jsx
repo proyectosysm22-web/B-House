@@ -52,7 +52,7 @@ export default function WaiterView({
                 className={isReady ? "blink-ready" : ""}
                 style={{
                   padding: "15px 5px",
-                  background: selectedTable?.id === t.id ? "#22c55e" : t.status === "occupied" ? "#ef4444" : "#cbd5e1",
+                  background: selectedTable?.id === t.id ? "#1f1f1f" : t.status === "occupied" ? "#c62828" : "#b8b2ad",
                   color: "white",
                   border: "none",
                   borderRadius: "8px",
@@ -79,8 +79,8 @@ export default function WaiterView({
                   onClick={() => setMenuTab(tab.value)}
                   style={{
                     borderRadius: "999px",
-                    border: menuTab === tab.value ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                    background: menuTab === tab.value ? "#dbeafe" : "white",
+                    border: menuTab === tab.value ? "2px solid #c62828" : "1px solid #d7c7c0",
+                    background: menuTab === tab.value ? "#fff1f1" : "white",
                     fontWeight: "bold",
                     padding: "6px 12px",
                     cursor: "pointer",
@@ -94,7 +94,7 @@ export default function WaiterView({
               {menuProducts.map((p) => (
                 <div key={p.id} style={{ padding: "10px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span>{p.name} (${p.price})</span>
-                  <button onClick={() => addToCart(p)} style={{ background: "#3b82f6", color: "white", border: "none", borderRadius: "5px", padding: "5px 12px", fontWeight: "bold" }}>
+                  <button onClick={() => addToCart(p)} style={{ background: "#c62828", color: "white", border: "1px solid #d85c5c", borderRadius: "6px", padding: "5px 12px", fontWeight: "bold" }}>
                     +
                   </button>
                 </div>
@@ -116,7 +116,7 @@ export default function WaiterView({
                     </button>
                   </div>
                 ))}
-                <button onClick={saveOrder} style={{ width: "100%", background: "#3b82f6", color: "white", border: "none", padding: "12px", marginTop: "10px", borderRadius: "8px", fontWeight: "bold" }}>
+                <button onClick={saveOrder} style={{ width: "100%", background: "#c62828", color: "white", border: "1px solid #d85c5c", padding: "12px", marginTop: "10px", borderRadius: "8px", fontWeight: "bold" }}>
                   ENVIAR A COCINA
                 </button>
               </div>
@@ -155,14 +155,14 @@ export default function WaiterView({
                 <div key={i} style={{ padding: "8px 0", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: "bold" }}>{oi.quantity}x {oi.products?.name}</div>
-                    <small style={{ color: oi.is_new ? "#3b82f6" : "#64748b" }}>{oi.is_new ? "(En Cocina)" : "(Servido)"}</small>
+                    <small style={{ color: oi.is_new ? "#c62828" : "#64748b" }}>{oi.is_new ? "(En Cocina)" : "(Servido)"}</small>
                   </div>
                   <span style={{ fontWeight: "bold" }}>${oi.price * oi.quantity}</span>
                 </div>
               ))}
             </div>
 
-            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#22c55e", textAlign: "right", marginBottom: "15px" }}>Total: ${activeOrder.total}</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#c62828", textAlign: "right", marginBottom: "15px" }}>Total: ${activeOrder.total}</div>
             <div style={{ width: "100%", background: "#0f172a", color: "white", border: "none", padding: "14px", borderRadius: "10px", fontWeight: "bold", fontSize: "1rem", textAlign: "center" }}>
               COBRO SOLO EN CAJA
             </div>

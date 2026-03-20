@@ -267,13 +267,13 @@ function App() {
             position: "fixed",
             bottom: "20px",
             right: "20px",
-            background: "#0f172a",
+            background: "#1f1f1f",
             color: "white",
             borderRadius: "12px",
             padding: "8px",
             display: "flex",
             gap: "6px",
-            boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
             zIndex: 150,
           }}
         >
@@ -287,7 +287,7 @@ function App() {
                 padding: "8px 10px",
                 fontWeight: "bold",
                 cursor: "pointer",
-                background: view === mode ? "#38bdf8" : "#1e293b",
+                background: view === mode ? "#c62828" : "#313131",
                 color: "white",
                 textTransform: "capitalize",
               }}
