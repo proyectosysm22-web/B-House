@@ -13,7 +13,7 @@ export default function AppHeader({ view, onSignOut }) {
         boxShadow: "0 10px 22px rgba(20,20,20,0.25)",
       }}
     >
-      <h2 style={{ margin: 0, fontSize: "1.2rem", letterSpacing: "0.4px" }}>
+      <h2 style={{ margin: 0, fontSize: "1.2rem", letterSpacing: "0.4px", color: "white" }}>
         {view === "admin"
           ? "Admin Panel"
           : view === "cocina"

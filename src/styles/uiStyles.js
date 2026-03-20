@@ -63,7 +63,6 @@ export const globalCss = `
   h1, h2, h3, h4 {
     font-family: 'Oswald', 'Segoe UI', sans-serif;
     letter-spacing: 0.3px;
-    color: var(--graphite);
   }
   @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   .blink-ready { animation: blink 1s infinite; background-color: #f8c25d !important; color: #111827 !important; }
