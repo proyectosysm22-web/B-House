@@ -23,6 +23,7 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("efectivo");
   const [lastInvoice, setLastInvoice] = useState(null);
+  const [cashReceived, setCashReceived] = useState("");
 
   const payableOrders = useMemo(
     () => orders.filter((order) => ["open", "ready", "delivered"].includes(order.status)),
@@ -43,6 +44,11 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
   const selectedEntry = payableTables.find((entry) => entry.table.id === selectedTableId) || null;
   const selectedOrder = selectedEntry?.order || null;
   const billItems = selectedOrder ? groupedBillItems(selectedOrder.order_items || []) : [];
+  const orderTotal = Number(selectedOrder?.total || 0);
+  const parsedCashReceived = Number(cashReceived || 0);
+  const hasCashValue = cashReceived.trim() !== "";
+  const cashChange = Math.max(parsedCashReceived - orderTotal, 0);
+  const cashShortfall = paymentMethod === "efectivo" && hasCashValue ? Math.max(orderTotal - parsedCashReceived, 0) : 0;
 
   function printInvoice(invoice) {
     const issueDate = new Date(invoice.issued_at).toLocaleString();
@@ -187,7 +193,10 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
                 Efectivo
               </button>
               <button
-                onClick={() => setPaymentMethod("transferencia")}
+                onClick={() => {
+                  setPaymentMethod("transferencia");
+                  setCashReceived("");
+                }}
                 style={{
                   flex: 1,
                   padding: "10px",
@@ -202,6 +211,51 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
               </button>
             </div>
 
+            {paymentMethod === "efectivo" && (
+              <div
+                style={{
+                  border: "1px solid #f3d2d2",
+                  borderRadius: "10px",
+                  background: "#fff7f7",
+                  padding: "12px",
+                  marginBottom: "14px",
+                }}
+              >
+                <label style={{ display: "block", fontWeight: "bold", marginBottom: "6px", color: "#7f1d1d" }}>
+                  Valor del billete
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={cashReceived}
+                  onChange={(event) => setCashReceived(event.target.value)}
+                  placeholder="Ej: 50000"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #d7c7c0",
+                    fontSize: "15px",
+                    boxSizing: "border-box",
+                    marginBottom: "10px",
+                  }}
+                />
+
+                <div style={{ display: "grid", gap: "4px", color: "#334155", fontSize: "14px" }}>
+                  <div>Total a cobrar: <strong>${orderTotal}</strong></div>
+                  <div>
+                    Cambio: <strong style={{ color: "#166534" }}>${cashChange}</strong>
+                  </div>
+                  {cashShortfall > 0 && (
+                    <div style={{ color: "#b91c1c", fontWeight: "bold" }}>
+                      Faltan ${cashShortfall} para completar el pago.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div style={{ fontSize: "1.7rem", fontWeight: "bold", textAlign: "right", color: "#c62828", marginBottom: "12px" }}>
               Total: ${selectedOrder.total}
             </div>
@@ -212,10 +266,21 @@ export default function CashierView({ tables, orders, onChargeOrder, notify }) {
                   notify("Aun no se puede cobrar: el pedido no esta entregado", "error");
                   return;
                 }
+                if (paymentMethod === "efectivo") {
+                  if (!hasCashValue) {
+                    notify("Ingresa el valor del billete recibido", "error");
+                    return;
+                  }
+                  if (parsedCashReceived < orderTotal) {
+                    notify("El valor recibido no cubre el total a cobrar", "error");
+                    return;
+                  }
+                }
                 const invoice = await onChargeOrder(selectedOrder, paymentMethod);
                 if (invoice) {
                   setLastInvoice(invoice);
                   setSelectedTableId(null);
+                  setCashReceived("");
                 }
               }}
               style={{
